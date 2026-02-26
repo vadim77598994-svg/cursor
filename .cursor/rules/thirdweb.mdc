@@ -1,0 +1,20 @@
+---
+description: Thirdweb SDK — кошелёк, контракты, минт
+globs: "**/*.tsx,**/contracts/**"
+alwaysApply: false
+---
+
+# Thirdweb Conventions
+
+- Подключение кошелька и работа с контрактами — только через `@thirdweb-dev/react` и `@thirdweb-dev/sdk`.
+- Адрес контракта и chainId брать из env: `process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS`, `process.env.NEXT_PUBLIC_CHAIN_ID`.
+- Использовать хуки: `useContract`, `useMint` (или эквиваленты для текущей версии SDK), `useAddress`, `useChain` для проверки сети.
+- Обрабатывать состояния транзакции: pending, success, error; показывать пользователю понятный фидбек (toast/сообщение).
+
+Пример обёртки провайдера:
+
+```tsx
+<ThirdwebProvider activeChain={chainId} clientId={process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}>
+  {children}
+</ThirdwebProvider>
+```

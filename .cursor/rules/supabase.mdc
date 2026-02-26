@@ -1,0 +1,12 @@
+---
+description: Supabase — клиент, RLS, переменные окружения
+globs: "**/lib/supabase/**,**/api/**,**/*supabase*"
+alwaysApply: false
+---
+
+# Supabase Conventions
+
+- Использовать `@supabase/supabase-js`: один созданный клиент (например в `lib/supabase.ts`) экспортировать и использовать везде.
+- URL и anon key — только из env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Учитывать RLS: политики для `profiles` и других таблиц описаны в TECH_SPEC.md; не обходить RLS на клиенте.
+- При работе с `profiles` идентификация по `wallet_address` (или по `auth.uid()` если используется Supabase Auth с привязкой кошелька).

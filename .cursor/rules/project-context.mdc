@@ -1,0 +1,11 @@
+---
+description: Контекст проекта Web3 NFT Glasses — стек и источники правды
+alwaysApply: true
+---
+
+# Project Context: NFT Glasses Collection
+
+- **Stack:** Thirdweb (React SDK + contracts) для Web3; Supabase для Auth, DB, Storage; React/Next.js фронт.
+- **Source of truth:** Полная спецификация — `TECH_SPEC.md`, настройка среды — `SETUP_GUIDE.md`. При изменении архитектуры обновляй эти файлы.
+- **Контракты:** Вызовы к NFT-контракту только через Thirdweb SDK (`@thirdweb-dev/react`, `@thirdweb-dev/sdk`). Не использовать прямой ethers.js для контрактов этого проекта.
+- **Секреты:** Не хардкодить API ключи и приватные ключи. Использовать `process.env.NEXT_PUBLIC_*` для клиентских переменных.
