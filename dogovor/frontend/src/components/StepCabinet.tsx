@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Location, Staff } from "@/lib/api";
-import { fetchLocations, fetchStaff } from "@/lib/api";
+import { API_BASE, fetchLocations, fetchStaff } from "@/lib/api";
 
 type StepCabinetProps = {
   onNext: (location: Location, staff: Staff) => void;
@@ -68,15 +68,37 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
 
   if (error) {
     const isNetwork = error.includes("fetch") || error.includes("Network") || error.includes("Failed");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const isLocalApi =
+      API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1");
     return (
       <div className="rounded-xl bg-red-50 p-6 text-red-800">
         <p className="font-medium">Сервер недоступен</p>
         <p className="mt-1">{error}</p>
         {isNetwork && (
           <div className="mt-4 rounded-lg bg-red-100/80 p-4 font-mono text-sm">
-            <p className="font-semibold">Запустите бэкенд в отдельном терминале:</p>
-            <p className="mt-1 break-all">cd ~/Desktop/cursor/dogovor/backend && ./run.sh</p>
-            <p className="mt-2 text-xs opacity-90">После появления «Uvicorn running on http://127.0.0.1:8000» обновите страницу.</p>
+            <p className="font-semibold">Диагностика</p>
+            <p className="mt-2 break-all">origin: {origin || "—"}</p>
+            <p className="mt-1 break-all">API: {API_BASE}</p>
+            {isLocalApi ? (
+              <>
+                <p className="mt-3 font-semibold">Похоже, фронт ходит на локальный API</p>
+                <p className="mt-1 break-all">
+                  На Railway у фронта должен быть задан
+                  {" "}
+                  NEXT_PUBLIC_DOGOVOR_API_URL
+                  {" "}
+                  (и нужен redeploy фронта после изменения).
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 font-semibold">Если бэкенд на Railway</p>
+                <p className="mt-1 break-all">
+                  Проверьте, что на бэкенде CORS_ORIGINS содержит этот origin (можно несколько через запятую).
+                </p>
+              </>
+            )}
           </div>
         )}
         {!isNetwork && (
