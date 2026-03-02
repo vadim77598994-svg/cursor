@@ -28,3 +28,13 @@ app.include_router(contracts.router, prefix="/api/v1", tags=["contracts"])
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/debug/cors")
+def debug_cors():
+    # Не содержит секретов; помогает быстро проверить, какие origins реально применены на проде.
+    return {
+        "cors_origins_raw": settings.cors_origins,
+        "cors_origins_list": settings.cors_origins_list,
+        "middleware_allow_origins": _origins,
+    }
