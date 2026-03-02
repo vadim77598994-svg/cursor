@@ -1,0 +1,4 @@
+# Тесты и разработка (pip install -r requirements-dev.txt)
+-r requirements.txt
+pytest>=7.0.0
+httpx>=0.25.0

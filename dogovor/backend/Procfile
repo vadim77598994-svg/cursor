@@ -1,0 +1,3 @@
+# Railway (и другие PaaS): команда запуска веб-процесса.
+# PORT подставляется платформой.
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT

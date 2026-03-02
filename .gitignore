@@ -4,3 +4,9 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# Сгенерированный вывод парсера .docx (только для сравнения)
+dogovor/backend/templates/contract_extracted.html
+# Сборка и кэш
+dogovor/frontend/.next/
+dogovor/**/__pycache__/

@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --medical-blue: #007AFF;
+  --medical-blue-light: #E8F2FF;
+}
+
+body {
+  @apply bg-white text-gray-800 antialiased;
+  font-size: 18px;
+  line-height: 1.6;
+}
