@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -10,6 +11,7 @@ from app.services.pdf_render import render_contract_pdf
 from app.services.storage_upload import upload_contract_pdf
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _safe(s: str | None) -> str:
@@ -46,6 +48,7 @@ def generate_contract(body: GenerateContractRequest):
         staff_signature_url = (staff_row.data or {}).get("signature_image_url") or ""
 
         contract_number = get_next_contract_number(prefix)
+        logger.info("Contract number allocated: %s", contract_number)
         current_date = datetime.now().strftime("%d.%m.%Y")
 
         patient_signature_data_url = (body.signature_data_url or "").strip() or None
@@ -67,9 +70,13 @@ def generate_contract(body: GenerateContractRequest):
         }
 
         pdf_bytes = render_contract_pdf(context)
+        if not pdf_bytes:
+            logger.warning("PDF not generated (xhtml2pdf missing or render error)")
         pdf_path = None
         if pdf_bytes:
             pdf_path = upload_contract_pdf(contract_number, pdf_bytes)
+            if not pdf_path:
+                logger.warning("Storage upload failed for %s", contract_number)
 
         row = {
             "contract_number": contract_number,
@@ -79,7 +86,10 @@ def generate_contract(body: GenerateContractRequest):
             "pdf_path": pdf_path,
             "device_uuid": body.device_uuid,
         }
-        supabase.table("dogovor_contracts").insert(row).execute()
+        insert_result = supabase.table("dogovor_contracts").insert(row).execute()
+        inserted = (insert_result.data or [{}])[0] if isinstance(insert_result.data, list) else (insert_result.data or {})
+        contract_id = inserted.get("id") if isinstance(inserted, dict) else None
+        logger.info("Contract row inserted: %s (id=%s)", contract_number, contract_id)
 
         email_sent = False
         to_email = (body.patient.patient_email or "").strip()
@@ -99,6 +109,7 @@ def generate_contract(body: GenerateContractRequest):
 
         return {
             "contract_number": contract_number,
+            "contract_id": contract_id,
             "pdf_path": pdf_path,
             "email_sent": email_sent,
             "message": msg,
@@ -106,4 +117,5 @@ def generate_contract(body: GenerateContractRequest):
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("generate_contract failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

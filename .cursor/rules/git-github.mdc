@@ -1,0 +1,10 @@
+# Git и GitHub для этого проекта
+
+- **Репозиторий:** https://github.com/vadim77598994-svg/cursor
+- **Remote:** `origin` → HTTPS (не SSH).
+
+## Если при `git push` снова запросит логин/пароль
+
+Напомни пользователю:
+- **Username:** `vadim77598994-svg`
+- **Password:** вводить **Personal Access Token** из GitHub (не пароль от аккаунта). Токен: GitHub → Settings → Developer settings → Personal access tokens (Classic), scope **repo**. Если токен не подходит — создать новый и ввести его в поле Password (в терминале при вводе ничего не отображается — это нормально).

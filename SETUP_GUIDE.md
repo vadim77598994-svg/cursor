@@ -15,6 +15,14 @@
 
 ## Шаг 1: Репозиторий и локальный проект
 
+Текущий проект уже привязан к GitHub: `https://github.com/vadim77598994-svg/cursor.git`.
+
+**Если при `git push` снова запросит логин:** Username = `vadim77598994-svg`, Password = **Personal Access Token** (GitHub → Settings → Developer settings → Tokens (classic), scope **repo**). В терминале пароль не отображается при вводе — это нормально.
+
+---
+
+*(Ниже — общий шаблон для новых проектов.)*
+
 ```bash
 mkdir nft-glasses-app && cd nft-glasses-app
 git init

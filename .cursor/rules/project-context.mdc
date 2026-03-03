@@ -5,7 +5,9 @@ alwaysApply: true
 
 # Project Context: NFT Glasses Collection
 
-- **Stack:** Thirdweb (React SDK + contracts) для Web3; Supabase для Auth, DB, Storage; React/Next.js фронт.
-- **Source of truth:** Полная спецификация — `TECH_SPEC.md`, настройка среды — `SETUP_GUIDE.md`. При изменении архитектуры обновляй эти файлы.
-- **Контракты:** Вызовы к NFT-контракту только через Thirdweb SDK (`@thirdweb-dev/react`, `@thirdweb-dev/sdk`). Не использовать прямой ethers.js для контрактов этого проекта.
-- **Секреты:** Не хардкодить API ключи и приватные ключи. Использовать `process.env.NEXT_PUBLIC_*` для клиентских переменных.
+- **Концепция:** Физические очки (фото есть) связаны с цифровым духом (NFT) 1:1; возможность передарить. Сначала Фаза 0 — каталог и галерея без кошелька/минта; Фаза 1 — добавить кошелёк и минт. Референс сайта для визуала/UX фронта — пользователь может скинуть позже, учесть при вёрстке галереи.
+- **Stack:** Thirdweb (React SDK + contracts) для Web3; Supabase для Auth, DB, Storage; React/Next.js фронт. Каталог предметов — таблица `collection_items` (фото = image_url), см. TECH_SPEC.md.
+- **Source of truth:** Спецификация — `TECH_SPEC.md`, настройка — `SETUP_GUIDE.md`, пошаговый план — `STEP_BY_STEP.md`.
+- **Контракты:** Вызовы к NFT-контракту только через Thirdweb SDK. Не использовать прямой ethers.js для контрактов этого проекта.
+- **Секреты:** Не хардкодить API ключи. Использовать `process.env.NEXT_PUBLIC_*` для клиентских переменных.
+- **Сервисы:** Сейчас у пользователя подключены только GitHub и Supabase. Thirdweb, Vercel и др. — подключать по мере надобности; при необходимости запрашивать у пользователя.

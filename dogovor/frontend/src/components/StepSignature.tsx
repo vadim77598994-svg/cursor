@@ -35,6 +35,7 @@ export function StepSignature({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [contractId, setContractId] = useState<string | null>(null);
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
 
@@ -105,6 +106,7 @@ export function StepSignature({
         signature_data_url: getSignatureDataUrl() ?? undefined,
       });
       setDone(result.contract_number);
+      setContractId(result.contract_id ?? null);
       setPdfPath(result.pdf_path ?? null);
       setEmailSent(result.email_sent ?? false);
     } catch (e) {
@@ -119,10 +121,13 @@ export function StepSignature({
       <div className="rounded-xl border-2 border-green-200 bg-green-50 p-8 text-center">
         <p className="text-xl font-semibold text-green-800">Договор оформлен</p>
         <p className="mt-2 text-2xl font-bold text-green-900">№ {done}</p>
+        {contractId && (
+          <p className="mt-2 text-sm text-gray-500">ID в БД: {contractId}</p>
+        )}
         {pdfPath ? (
           <p className="mt-4 text-gray-600">PDF сохранён: {pdfPath}</p>
         ) : (
-          <p className="mt-4 text-gray-600">Метаданные сохранены. Создайте bucket «contracts» в Supabase Storage для сохранения PDF.</p>
+          <p className="mt-4 text-amber-700">PDF не сгенерирован. Проверьте логи бэкенда и наличие xhtml2pdf; bucket «contracts» в Supabase Storage.</p>
         )}
         {emailSent && (
           <p className="mt-2 text-green-700 font-medium">Договор отправлен на email клиента.</p>

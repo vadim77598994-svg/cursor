@@ -2,11 +2,14 @@
 Отправка письма с подписанным договором (PDF) на email клиента через SMTP.
 Используется только если в .env заданы SMTP_*.
 """
+import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
+
+logger = logging.getLogger(__name__)
 
 
 def send_contract_pdf(
@@ -22,6 +25,7 @@ def send_contract_pdf(
     from app.config import settings
 
     if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        logger.warning("SMTP not configured (missing SMTP_HOST/USER/PASSWORD)")
         return False
 
     from_addr = settings.smtp_from_email or settings.smtp_user
@@ -56,6 +60,8 @@ def send_contract_pdf(
         with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port) as server:
             server.login(settings.smtp_user, settings.smtp_password)
             server.sendmail(from_addr, [to_email], msg.as_string())
+        logger.info("Contract PDF sent to %s", to_email)
         return True
-    except Exception:
+    except Exception as e:
+        logger.exception("Failed to send contract email to %s: %s", to_email, e)
         return False

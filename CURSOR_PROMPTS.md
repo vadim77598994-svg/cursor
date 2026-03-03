@@ -1,6 +1,16 @@
 # Примеры промптов для Cursor
 
-> Используй эти промпты в чате Cursor для генерации ключевых компонентов проекта NFT Glasses. Перед запросом подгрузи контекст: @TECH_SPEC.md и при необходимости @SETUP_GUIDE.md.
+> Используй эти промпты в чате Cursor для генерации ключевых компонентов проекта NFT Glasses. Перед запросом подгрузи контекст: @TECH_SPEC.md и при необходимости @SETUP_GUIDE.md, @STEP_BY_STEP.md.
+
+---
+
+## 0. Фаза 0 — Галерея каталога (без кошелька)
+
+```
+Проект: NFT-коллекция очков. Фаза 0 — без кошелька и минта. Данные в Supabase: таблица collection_items (name, description, image_url, rarity, lenses, frame, slug). См. TECH_SPEC.md и STEP_BY_STEP.md.
+
+Задача: страница Gallery — список предметов из collection_items через Supabase client. Карточка: фото (image_url), название, rarity, lenses, frame. Адаптивная сетка, скелетоны при загрузке. Фильтры по rarity и frame (опционально). Без Connect Wallet и без минта.
+```
 
 ---
 

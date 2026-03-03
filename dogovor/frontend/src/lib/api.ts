@@ -53,6 +53,7 @@ export type GenerateContractPayload = {
 
 export type GenerateContractResult = {
   contract_number: string;
+  contract_id?: string | null;
   pdf_path?: string | null;
   email_sent?: boolean;
   message?: string;

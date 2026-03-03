@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime
 
 from app.config import settings
 from app.db import supabase
+
+logger = logging.getLogger(__name__)
 
 
 def upload_contract_pdf(contract_number: str, pdf_bytes: bytes) -> str | None:
@@ -18,6 +21,8 @@ def upload_contract_pdf(contract_number: str, pdf_bytes: bytes) -> str | None:
             pdf_bytes,
             {"content-type": "application/pdf"},
         )
+        logger.info("Contract PDF uploaded: %s/%s", bucket, path)
         return path
-    except Exception:
+    except Exception as e:
+        logger.exception("Storage upload failed for %s: %s", path, e)
         return None
