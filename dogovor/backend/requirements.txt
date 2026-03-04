@@ -5,9 +5,8 @@ pydantic==2.10.3
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
 jinja2==3.1.4
-# PDF: xhtml2pdf требует pycairo/cairo — на Railway сборка падает. Пока отключено; договоры сохраняются в БД без PDF.
-# Локально: pip install xhtml2pdf (если установлен cairo: brew install cairo pkg-config)
-# xhtml2pdf==0.2.16
+# PDF: при сборке через Dockerfile (cairo установлен) — ставится; без Docker на Railway — закомментировать.
+xhtml2pdf==0.2.16
 
 # Парсинг .docx (без потери форматирования): pip install python-docx
 python-docx==1.1.2
