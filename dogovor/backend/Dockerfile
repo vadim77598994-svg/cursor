@@ -3,10 +3,14 @@
 
 FROM python:3.12-slim
 
+# Системные пакеты для сборки pycairo (зависимость xhtml2pdf)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     libcairo2-dev \
-    libpango-1.0-0 \
+    libpango1.0-dev \
     libpangocairo-1.0-0 \
+    libgirepository1.0-dev \
+    libglib2.0-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
