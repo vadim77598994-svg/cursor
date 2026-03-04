@@ -12,6 +12,38 @@ from email import encoders
 logger = logging.getLogger(__name__)
 
 
+def check_smtp_connection() -> dict:
+    """
+    Проверяет подключение к SMTP (connect + login). Не отправляет письмо.
+    Возвращает dict: smtp_configured, connection_ok, error (если есть).
+    """
+    from app.config import settings
+
+    out: dict = {"smtp_configured": False, "connection_ok": False}
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        out["error"] = "SMTP не настроен: задайте SMTP_HOST, SMTP_USER, SMTP_PASSWORD"
+        return out
+
+    out["smtp_configured"] = True
+    out["smtp_host"] = settings.smtp_host
+    out["smtp_port"] = settings.smtp_port
+    out["smtp_user"] = settings.smtp_user[:3] + "***" if len(settings.smtp_user) > 3 else "***"
+
+    try:
+        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10) as server:
+            server.login(settings.smtp_user, settings.smtp_password)
+        out["connection_ok"] = True
+    except smtplib.SMTPAuthenticationError as e:
+        out["error"] = "Ошибка авторизации SMTP: неверный логин или пароль приложения. Проверьте SMTP_USER и SMTP_PASSWORD в Railway."
+    except smtplib.SMTPException as e:
+        out["error"] = f"SMTP: {type(e).__name__}: {str(e)}"
+    except OSError as e:
+        out["error"] = f"Соединение: {type(e).__name__}: {str(e)}"
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {str(e)}"
+    return out
+
+
 def send_contract_pdf(
     to_email: str,
     contract_number: str,

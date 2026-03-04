@@ -57,6 +57,13 @@ def health(pdf_check: bool = False):
     return out
 
 
+@app.get("/debug/smtp-check")
+def debug_smtp_check():
+    """Проверка подключения к SMTP (без отправки письма). Пароль в ответ не попадает."""
+    from app.services.email_send import check_smtp_connection
+    return check_smtp_connection()
+
+
 @app.get("/debug/cors")
 def debug_cors():
     # Не содержит секретов; помогает быстро проверить, какие origins реально применены на проде.

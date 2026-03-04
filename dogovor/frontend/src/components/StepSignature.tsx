@@ -54,33 +54,72 @@ export function StepSignature({
     return imageData.data.some((_, i) => i % 4 === 3 && imageData.data[i] > 0);
   }, []);
 
+  const getCoords = useCallback((canvas: HTMLCanvasElement, clientX: number, clientY: number) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height),
+    };
+  }, []);
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const { x, y } = getCoords(canvas, e.clientX, e.clientY);
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const { x, y } = getCoords(canvas, e.clientX, e.clientY);
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
   const endDrawing = () => setIsDrawing(false);
+
+  const startDrawingTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = getCoords(canvas, touch.clientX, touch.clientY);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = getCoords(canvas, touch.clientX, touch.clientY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const endDrawingTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    setIsDrawing(false);
+  };
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -161,6 +200,9 @@ export function StepSignature({
           onMouseMove={draw}
           onMouseUp={endDrawing}
           onMouseLeave={endDrawing}
+          onTouchStart={startDrawingTouch}
+          onTouchMove={drawTouch}
+          onTouchEnd={endDrawingTouch}
         />
       </div>
 
@@ -182,6 +224,9 @@ export function StepSignature({
           {isSubmitting ? "Создание договора…" : "Сгенерировать договор"}
         </button>
       </div>
+      {isSubmitting && (
+        <p className="text-center text-sm text-gray-500">Подождите, формируем PDF (до 60 сек)…</p>
+      )}
 
       {error && (
         <div className="rounded-xl bg-red-50 p-4 text-red-800">

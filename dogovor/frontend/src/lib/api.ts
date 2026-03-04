@@ -59,17 +59,31 @@ export type GenerateContractResult = {
   message?: string;
 };
 
+const GENERATE_CONTRACT_TIMEOUT_MS = 60_000;
+
 export async function generateContract(
   payload: GenerateContractPayload
 ): Promise<GenerateContractResult> {
-  const res = await fetch(`${API_BASE}/api/v1/contracts/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || "Ошибка при создании договора");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GENERATE_CONTRACT_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/contracts/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Ошибка при создании договора");
+    }
+    return res.json();
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Запрос занял слишком много времени. Проверьте интернет и попробуйте ещё раз.");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return res.json();
 }
