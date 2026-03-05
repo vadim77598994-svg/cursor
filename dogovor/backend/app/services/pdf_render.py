@@ -1,5 +1,7 @@
+import base64
 import io
 import logging
+import tempfile
 from pathlib import Path
 
 import jinja2
@@ -39,14 +41,35 @@ def _register_dejavu_font():
         logger.warning("Failed to register DejaVu font: %s", e)
 
 
+def _data_url_to_temp_file(uri: str) -> str | None:
+    """Декодирует data URL (data:image/png;base64,...) во временный файл. Возвращает путь или None."""
+    if not uri.startswith("data:"):
+        return None
+    try:
+        header, _, b64 = uri.partition(",")
+        if not b64:
+            return None
+        data = base64.b64decode(b64)
+        suffix = ".png" if "png" in header else ".jpg"
+        f = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        f.write(data)
+        f.close()
+        return f.name
+    except Exception:
+        return None
+
+
 def _make_link_callback(base_path: Path):
-    """link_callback для pisa: изображения и прочие ресурсы."""
+    """link_callback для pisa: data URL подписи → временный файл; остальное — путь от base_path."""
     base_path = base_path.resolve()
 
     def link_callback(uri: str, _basepath: str | None = None):
         if not uri or not uri.strip():
             return None
         uri = uri.strip()
+        # Подпись с фронта приходит как data:image/png;base64,... — pisa не умеет, даём путь к файлу
+        if uri.startswith("data:"):
+            return _data_url_to_temp_file(uri)
         if Path(uri).is_absolute() and Path(uri).exists():
             return uri
         candidate = (base_path / uri).resolve()
