@@ -60,16 +60,19 @@ def _data_url_to_temp_file(uri: str) -> str | None:
 
 
 def _make_link_callback(base_path: Path):
-    """link_callback для pisa: data URL подписи → временный файл; остальное — путь от base_path."""
+    """link_callback для pisa: data URL подписи → temp файл; шрифт fonts/DejaVuSans.ttf → явный путь; остальное — base_path."""
     base_path = base_path.resolve()
+    font_file = base_path / "fonts" / FONT_FILE_NAME
 
     def link_callback(uri: str, _basepath: str | None = None):
         if not uri or not uri.strip():
             return None
         uri = uri.strip()
-        # Подпись с фронта приходит как data:image/png;base64,... — pisa не умеет, даём путь к файлу
         if uri.startswith("data:"):
             return _data_url_to_temp_file(uri)
+        # Шрифт для кириллицы: xhtml2pdf запрашивает по url из @font-face
+        if ("fonts" in uri and FONT_FILE_NAME in uri) or (uri.endswith(".ttf") and font_file.exists()):
+            return str(font_file)
         if Path(uri).is_absolute() and Path(uri).exists():
             return uri
         candidate = (base_path / uri).resolve()
@@ -91,7 +94,7 @@ def render_contract_pdf(context: dict) -> bytes | None:
         font_path = FONTS_DIR / FONT_FILE_NAME
         _register_dejavu_font()
         ctx = dict(context)
-        ctx["font_available"] = _registered_font
+        ctx["font_available"] = font_path.exists()
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
             autoescape=jinja2.select_autoescape(["html", "xml"]),
