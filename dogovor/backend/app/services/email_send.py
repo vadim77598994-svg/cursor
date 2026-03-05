@@ -146,6 +146,7 @@ def send_contract_pdf(
     # На Railway SMTP недоступен; при наличии RESEND_API_KEY всегда используем Resend
     provider = (settings.email_provider or "").strip().lower()
     use_resend = bool(settings.resend_api_key) or provider == "resend"
+    logger.info("Email: use_resend=%s (provider=%r, has_key=%s)", use_resend, provider, bool(settings.resend_api_key))
     if use_resend:
         from_email = (settings.resend_from_email or "").strip() or (settings.smtp_from_email or settings.smtp_user or "")
         from_name_resend = (settings.resend_from_name or from_name).strip()

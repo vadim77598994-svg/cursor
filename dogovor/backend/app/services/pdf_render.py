@@ -95,6 +95,7 @@ def render_contract_pdf(context: dict) -> bytes | None:
         _register_dejavu_font()
         ctx = dict(context)
         ctx["font_available"] = font_path.exists()
+        logger.info("PDF font: path=%s exists=%s", font_path, ctx["font_available"])
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
             autoescape=jinja2.select_autoescape(["html", "xml"]),
@@ -119,4 +120,6 @@ def render_contract_pdf(context: dict) -> bytes | None:
     if result.err:
         logger.warning("xhtml2pdf CreatePDF failed: err=%s (see pisa errors)", result.err)
         return None
-    return out.getvalue()
+    pdf_bytes = out.getvalue()
+    logger.info("PDF generated: %s bytes", len(pdf_bytes))
+    return pdf_bytes
