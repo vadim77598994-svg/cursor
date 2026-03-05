@@ -168,8 +168,10 @@ export function StepSignature({
         ) : (
           <p className="mt-4 text-amber-700">PDF не сгенерирован. Проверьте логи бэкенда и наличие xhtml2pdf; bucket «contracts» в Supabase Storage.</p>
         )}
-        {emailSent && (
+        {emailSent ? (
           <p className="mt-2 text-green-700 font-medium">Договор отправлен на email клиента.</p>
+        ) : (
+          <p className="mt-2 text-amber-700">Письмо не отправлено. Проверьте email в данных или настройки почты на сервере (Resend на Railway).</p>
         )}
         <button
           type="button"
@@ -225,7 +227,7 @@ export function StepSignature({
         </button>
       </div>
       {isSubmitting && (
-        <p className="text-center text-sm text-gray-500">Подождите, формируем PDF (до 60 сек)…</p>
+        <p className="text-center text-sm text-gray-500">Подождите, формируем PDF (до 2 мин)…</p>
       )}
 
       {error && (

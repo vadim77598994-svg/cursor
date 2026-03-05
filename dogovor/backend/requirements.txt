@@ -10,3 +10,5 @@ xhtml2pdf==0.2.16
 
 # Парсинг .docx (без потери форматирования): pip install python-docx
 python-docx==1.1.2
+# Resend — отправка писем по API (для Railway, где SMTP заблокирован)
+resend==2.5.0

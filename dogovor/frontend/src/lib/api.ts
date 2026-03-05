@@ -59,7 +59,7 @@ export type GenerateContractResult = {
   message?: string;
 };
 
-const GENERATE_CONTRACT_TIMEOUT_MS = 60_000;
+const GENERATE_CONTRACT_TIMEOUT_MS = 120_000;
 
 export async function generateContract(
   payload: GenerateContractPayload

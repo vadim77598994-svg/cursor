@@ -1,19 +1,57 @@
-# Отправка договора на email (SMTP)
+# Отправка договора на email
 
-После генерации договора PDF можно отправить клиенту на указанный email.
+После генерации договора PDF можно отправить клиенту на указанный email. Поддерживаются два провайдера: **SMTP** (Яндекс) и **Resend** (HTTP API).
 
-## Настройка
+## Когда что использовать
 
-В `backend/.env` заданы переменные (уже заполнены для support@pyeoptics.com):
+- **Railway (Free/Hobby):** SMTP заблокирован. Задайте `RESEND_API_KEY` и `RESEND_FROM_EMAIL` (при наличии ключа Resend используется автоматически). Либо явно: `EMAIL_PROVIDER=resend` — см. ниже.
+- **Timeweb (после переезда) и локально:** Задайте `EMAIL_PROVIDER=smtp` и SMTP_* (Яндекс) — письма пойдут напрямую с вашего ящика.
 
+Подробнее: `docs/EMAIL_STRATEGY.md`.
+
+## Настройка SMTP (Timeweb / локально)
+
+В `backend/.env` или в переменных окружения:
+
+- `EMAIL_PROVIDER=smtp` (по умолчанию)
 - `SMTP_HOST` — хост (например `smtp.yandex.ru`)
-- `SMTP_PORT` — порт (465 для SSL)
-- `SMTP_USER` — логин
-- `SMTP_PASSWORD` — пароль (или пароль приложения)
-- `SMTP_FROM_EMAIL` — адрес отправителя
-- `SMTP_FROM_NAME` — имя отправителя («Пай Оптикс»)
+- `SMTP_PORT` — 465 для SSL
+- `SMTP_USER`, `SMTP_PASSWORD` — логин и пароль приложения
+- `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` — от кого письмо
 
 Файл `.env` в git не коммитится — не публикуйте пароль в репозитории.
+
+## Настройка Resend (Railway)
+
+1. Регистрация на [resend.com](https://resend.com), в **API Keys** создайте ключ и скопируйте его (начинается с `re_`).
+2. В Railway (Variables бэкенда) задайте:
+   - `EMAIL_PROVIDER=resend`
+   - `RESEND_API_KEY=re_xxxx` (ваш ключ)
+   - `RESEND_FROM_EMAIL` — см. ниже
+   - `RESEND_FROM_NAME=Пай Оптикс`
+3. Redeploy бэкенда.
+
+### Что указать в RESEND_FROM_EMAIL
+
+**Вариант А — быстро для теста (без верификации)**  
+На бесплатном тире Resend разрешает отправлять **с их служебного адреса** без настройки домена. В Railway задайте:
+
+```
+RESEND_FROM_EMAIL=onboarding@resend.dev
+```
+
+Письма будут приходить клиентам, но в поле «От кого» будет `onboarding@resend.dev` (или как вы укажете в Resend). Подходит, чтобы проверить, что отправка с Railway работает. Лимиты бесплатного тира: порядка 100 писем/день.
+
+**Вариант Б — свой домен (support@pyeoptics.com и т.п.)**  
+Чтобы письма шли **с вашего адреса** (например `Пай Оптикс <support@pyeoptics.com>`), домен нужно **верифицировать** в Resend:
+
+1. Зайти на [resend.com](https://resend.com) → **Domains** (или [resend.com/domains](https://resend.com/domains)).
+2. Нажать **Add Domain** и ввести домен (например `pyeoptics.com` без www).
+3. Resend покажет DNS-записи (SPF, DKIM и т.д.), которые нужно добавить в настройках домена у вашего регистратора или хостинга.
+4. Добавить эти записи в DNS, в Resend нажать **Verify**. После успешной верификации можно отправлять с любого ящика на этом домене (например `support@pyeoptics.com`).
+5. В Railway задать: `RESEND_FROM_EMAIL=support@pyeoptics.com`.
+
+На бесплатном плане можно верифицировать один домен. Если DNS настраивать не хотите — используйте вариант А для теста.
 
 ## Поведение
 

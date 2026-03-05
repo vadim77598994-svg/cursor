@@ -1,7 +1,8 @@
 """
-Отправка письма с подписанным договором (PDF) на email клиента через SMTP.
-Используется только если в .env заданы SMTP_*.
+Отправка письма с подписанным договором (PDF) на email клиента.
+Поддерживается два провайдера: SMTP (Яндекс, для Timeweb) и Resend API (для Railway).
 """
+import base64
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -44,6 +45,79 @@ def check_smtp_connection() -> dict:
     return out
 
 
+def _send_via_resend(
+    to_email: str,
+    subject: str,
+    body: str,
+    from_email: str,
+    from_name: str,
+    pdf_bytes: bytes,
+    pdf_filename: str,
+) -> bool:
+    """Отправка через Resend API (для Railway)."""
+    from app.config import settings
+
+    if not settings.resend_api_key or not from_email:
+        logger.warning("Resend not configured (RESEND_API_KEY, RESEND_FROM_EMAIL)")
+        return False
+    try:
+        import resend
+        resend.api_key = settings.resend_api_key
+        params = {
+            "from": f"{from_name} <{from_email}>",
+            "to": [to_email],
+            "subject": subject,
+            "text": body,
+            "attachments": [
+                {
+                    "content": base64.b64encode(pdf_bytes).decode("ascii"),
+                    "filename": pdf_filename,
+                }
+            ],
+        }
+        resend.Emails.send(params)
+        logger.info("Contract PDF sent via Resend to %s", to_email)
+        return True
+    except Exception as e:
+        logger.exception("Resend failed to %s: %s", to_email, e)
+        return False
+
+
+def _send_via_smtp(
+    to_email: str,
+    subject: str,
+    body: str,
+    from_addr: str,
+    from_name: str,
+    pdf_bytes: bytes,
+    pdf_filename: str,
+) -> bool:
+    """Отправка через SMTP (Яндекс и др., для Timeweb)."""
+    from app.config import settings
+
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        return False
+    msg = MIMEMultipart()
+    msg["From"] = f"{from_name} <{from_addr}>"
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+    part = MIMEBase("application", "pdf")
+    part.set_payload(pdf_bytes)
+    encoders.encode_base64(part)
+    part.add_header("Content-Disposition", "attachment", filename=pdf_filename)
+    msg.attach(part)
+    try:
+        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=5) as server:
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.sendmail(from_addr, [to_email], msg.as_string())
+        logger.info("Contract PDF sent via SMTP to %s", to_email)
+        return True
+    except Exception as e:
+        logger.exception("SMTP failed to %s: %s", to_email, e)
+        return False
+
+
 def send_contract_pdf(
     to_email: str,
     contract_number: str,
@@ -52,15 +126,11 @@ def send_contract_pdf(
 ) -> bool:
     """
     Отправляет письмо с вложением PDF на to_email.
-    Возвращает True при успехе, False при ошибке или если SMTP не настроен.
+    Провайдер: EMAIL_PROVIDER=resend|smtp; если не задан — при наличии RESEND_API_KEY используется Resend (удобно для Railway).
+    Возвращает True при успехе, False при ошибке или если отправка не настроена.
     """
     from app.config import settings
 
-    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
-        logger.warning("SMTP not configured (missing SMTP_HOST/USER/PASSWORD)")
-        return False
-
-    from_addr = settings.smtp_from_email or settings.smtp_user
     from_name = (settings.smtp_from_name or "Пай Оптикс").strip()
     subject = f"Договор № {contract_number} — Пай Оптикс"
     body = f"""Здравствуйте.
@@ -71,29 +141,15 @@ def send_contract_pdf(
 С уважением,
 {from_name}
 """
+    pdf_filename = f"dogovor_{contract_number.replace('/', '-')}.pdf"
 
-    msg = MIMEMultipart()
-    msg["From"] = f"{from_name} <{from_addr}>"
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
+    # На Railway SMTP недоступен; при наличии RESEND_API_KEY всегда используем Resend
+    provider = (settings.email_provider or "").strip().lower()
+    use_resend = bool(settings.resend_api_key) or provider == "resend"
+    if use_resend:
+        from_email = (settings.resend_from_email or "").strip() or (settings.smtp_from_email or settings.smtp_user or "")
+        from_name_resend = (settings.resend_from_name or from_name).strip()
+        return _send_via_resend(to_email, subject, body, from_email, from_name_resend, pdf_bytes, pdf_filename)
 
-    part = MIMEBase("application", "pdf")
-    part.set_payload(pdf_bytes)
-    encoders.encode_base64(part)
-    part.add_header(
-        "Content-Disposition",
-        "attachment",
-        filename=f"dogovor_{contract_number.replace('/', '-')}.pdf",
-    )
-    msg.attach(part)
-
-    try:
-        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port) as server:
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(from_addr, [to_email], msg.as_string())
-        logger.info("Contract PDF sent to %s", to_email)
-        return True
-    except Exception as e:
-        logger.exception("Failed to send contract email to %s: %s", to_email, e)
-        return False
+    from_addr = settings.smtp_from_email or settings.smtp_user
+    return _send_via_smtp(to_email, subject, body, from_addr or "", from_name, pdf_bytes, pdf_filename)

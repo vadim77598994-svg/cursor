@@ -59,9 +59,15 @@ def health(pdf_check: bool = False):
 
 @app.get("/debug/smtp-check")
 def debug_smtp_check():
-    """Проверка подключения к SMTP (без отправки письма). Пароль в ответ не попадает."""
+    """Проверка настроек отправки писем: SMTP или Resend (без отправки). Секреты в ответ не попадают."""
+    from app.config import settings
+    out = {"email_provider": (settings.email_provider or "smtp").strip().lower()}
+    if out["email_provider"] == "resend":
+        out["resend_configured"] = bool(settings.resend_api_key and (settings.resend_from_email or settings.smtp_from_email))
+        out["resend_from_email_set"] = bool((settings.resend_from_email or settings.smtp_from_email or "").strip())
+        return out
     from app.services.email_send import check_smtp_connection
-    return check_smtp_connection()
+    return {**out, **check_smtp_connection()}
 
 
 @app.get("/debug/cors")

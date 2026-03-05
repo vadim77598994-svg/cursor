@@ -3,7 +3,7 @@
 
 FROM python:3.12-slim
 
-# Системные пакеты для сборки pycairo (зависимость xhtml2pdf)
+# Системные пакеты: pycairo для xhtml2pdf + шрифты с кириллицей для видимого текста в PDF
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libcairo2-dev \
@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgirepository1.0-dev \
     libglib2.0-dev \
     pkg-config \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -20,6 +21,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+# Шрифт с кириллицей для видимого текста в PDF (xhtml2pdf ищет по пути fonts/ от рабочей директории)
+RUN mkdir -p /app/fonts && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/fonts/
 
 EXPOSE 8080
 ENV PORT=8080
