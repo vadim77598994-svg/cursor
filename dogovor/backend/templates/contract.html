@@ -6,18 +6,20 @@
   <style>
     /* xhtml2pdf подхватывает шрифт только через @font-face; link_callback возвращает путь к файлу */
     {% if font_available %}@font-face { font-family: 'DejaVuSans'; src: url('fonts/DejaVuSans.ttf'); }{% endif %}
-    body { font-family: DejaVuSans, sans-serif; font-size: 10pt; line-height: 1.35; padding: 20px; color: #000; }
-    h1 { font-size: 14pt; text-align: center; margin-bottom: 16px; }
-    h2 { font-size: 11pt; margin-top: 14px; margin-bottom: 8px; }
-    .meta { margin-bottom: 14px; color: #444; }
-    p { margin: 6px 0; }
-    ul { margin: 6px 0; padding-left: 20px; }
-    li { margin: 3px 0; }
-    .signature-block { margin-top: 20px; }
+    body { font-family: DejaVuSans, sans-serif; font-size: 10pt; line-height: 1.4; padding: 24px; color: #000; }
+    h1 { font-size: 14pt; text-align: center; margin-bottom: 20px; }
+    h2 { font-size: 11pt; font-weight: bold; margin-top: 18px; margin-bottom: 10px; }
+    .meta { margin-bottom: 12px; color: #333; }
+    p { margin: 8px 0; text-align: justify; }
+    ul { margin: 8px 0; padding-left: 22px; }
+    li { margin: 5px 0; text-align: justify; }
+    .signature-block { margin-top: 24px; }
     .requisites { font-size: 9pt; color: #555; margin-top: 24px; }
-    .appendix { margin-top: 24px; page-break-before: always; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
-    th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; }
+    .appendix { margin-top: 28px; page-break-before: always; }
+    .appendix h2 { margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
+    th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; vertical-align: top; }
+    .sig-table td { padding: 10px 12px; }
   </style>
 </head>
 <body>
@@ -100,24 +102,18 @@
   <li>Приложения являются неотъемлемой частью Договора.</li>
 </ul>
 
-<h2>ПРИЛОЖЕНИЯ К ДОГОВОРУ</h2>
-<p>• ИНФОРМИРОВАННОЕ ДОБРОВОЛЬНОЕ СОГЛАСИЕ</p>
-<p>• СОГЛАСИЕ ПАЦИЕНТА НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ ИСПОЛНИТЕЛЕМ</p>
-<p>• РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</p>
+<h2>6. ПРИЛОЖЕНИЯ К ДОГОВОРУ</h2>
+<p>6.А. Информированное добровольное согласие</p>
+<p>6.Б. Согласие пациента на обработку персональных данных</p>
+<p>6.В. Реквизиты и подписи сторон</p>
 
-<div class="signature-block">
-  <p><strong>Пациент</strong></p>
-  <p>ФИО {{ patient_fio }}, дата рождения: {{ patient_birth_date }}</p>
-  <p>Паспорт серии {{ passport_series }}, номер {{ passport_number }}, выдан: {{ passport_date }}, выдавший орган: {{ passport_issued_by }}</p>
-  <p>Зарегистрированный по адресу: {{ reg_address }}</p>
-  <p>Подпись Пациента: {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% else %}_______________________{% endif %}</p>
-  <p style="margin-top: 16px;"><strong>Исполнитель</strong></p>
-  <p>ООО «ПАЙ ОПТИКС»</p>
-  <p>Юридический адрес: 191025, город Санкт-Петербург, ул. Рубинштейна, д. 10 литера А, помещ. 1-н.</p>
-  <p>ИНН 7715944987, КПП 784001001, ОГРН 1127747200855</p>
-  <p>Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com</p>
-  <p>Оптометрист {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" /> {% endif %}_______________/ {{ staff_fio }}</p>
-</div>
+<h2>7. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</h2>
+<table class="sig-table">
+  <tr>
+    <td width="50%"><strong>Пациент</strong><br />ФИО {{ patient_fio }}<br />Дата рождения: {{ patient_birth_date }}<br />Паспорт серии {{ passport_series }} № {{ passport_number }}, выдан {{ passport_date }}, {{ passport_issued_by }}<br />Зарегистрирован по адресу: {{ reg_address }}<br /><br />Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% else %}_______________________{% endif %} / {{ patient_fio }}</td>
+    <td width="50%"><strong>Исполнитель</strong><br />ООО «ПАЙ ОПТИКС»<br />Юридический адрес: 191025, г. Санкт-Петербург, ул. Рубинштейна, д. 10 лит. А, помещ. 1-н.<br />ИНН 7715944987, КПП 784001001, ОГРН 1127747200855<br />Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com<br /><br />Оптометрист {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% endif %} _______________/ {{ staff_fio }}</td>
+  </tr>
+</table>
 
 <div class="appendix">
   <h2>Приложение 1 к ДОГОВОРУ № {{ contract_number }} об оказании платных медицинских услуг от {{ current_date }}</h2>
@@ -126,8 +122,8 @@
   <p>Я, Пациент, паспортные данные указаны в преамбуле Договора, даю информированное добровольное согласие на виды медицинских вмешательств, включенных в Перечень определенных видов медицинских вмешательств, на которые граждане дают информированное добровольное согласие при выборе оптометриста и медицинской организации для получения первичной медико-санитарной помощи, утвержденный приказом Минздравсоцразвития России от 23 апреля 2012 года № 390н (зарегистрирован Минюстом России 5 мая 2012 г. № 24082) (далее – «Перечень видов медицинских вмешательств»), при оказании мне или лицу, чьим законным представителем я являюсь (не заполнять если неприменимо).</p>
   <p>первичной медико-санитарной помощи в ООО "ПАЙ ОПТИКС" медицинским работником: {{ staff_fio }}.</p>
   <p>Я ознакомлен с Перечнем видов медицинских вмешательств, в доступной для меня форме мне даны разъяснения о целях, методах оказания медицинской помощи, связанном с ними риске, возможных вариантах медицинского вмешательства, о его последствиях, а также о предполагаемых результатах оказания медицинской помощи. Мне разъяснено, что при оформлении настоящего добровольного информированного согласия, а также перед осуществлением медицинского вмешательства, включенного в Перечень видов медицинских вмешательств, я имею право отказаться от одного или нескольких вышеуказанных видов медицинского вмешательства.</p>
-  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" /> {% endif %}___________________________/ {{ staff_fio }}</p>
-  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" /> {% endif %}_______________/ {{ patient_fio }}</p>
+  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} ___________________________/ {{ staff_fio }}</p>
+  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
 </div>
 
 <div class="appendix">
@@ -138,7 +134,7 @@
   <p>Предоставляю Оператору право осуществлять все действия (операции) с моими (моего ребенка) персональными данными, включая сбор, систематизацию, накопление, хранение, обновление, изменение, использование, обезличивание, блокирование, уничтожение. Оператор вправе обрабатывать мои (моего ребенка) персональные данные посредством внесения их в электронную базу данных, включения в списки (реестры) и отчетные формы.</p>
   <p>Настоящее согласие дано мной {{ current_date }} и действует бессрочно.</p>
   <p>Я оставляю за собой право отозвать свое согласие посредством составления соответствующего письменного документа, который может быть направлен мной в адрес Оператора по почте заказным письмом с уведомлением о вручении, либо вручен лично под расписку представителю Оператора.</p>
-  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" /> {% endif %}_______________/ {{ patient_fio }}</p>
+  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
 </div>
 
 <div class="appendix">
@@ -156,8 +152,8 @@
   <p>2. Указанные в п.1 настоящего Акта Услуги согласно Договору оказаны в полном объеме.</p>
   <p>3. Заказчик замечаний, претензий по количеству и качеству Услуг, оказанных Исполнителем не имеет.</p>
   <p>4. Настоящий Акт составлен в двух экземплярах, по одному для каждой из сторон.</p>
-  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" /> {% endif %}____________________________/ {{ staff_fio }}</p>
-  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" /> {% endif %}_______________/ {{ patient_fio }}</p>
+  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} ____________________________/ {{ staff_fio }}</p>
+  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
 </div>
 
 </body>

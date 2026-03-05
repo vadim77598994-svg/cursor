@@ -5,7 +5,7 @@
 ## Обязательно в Railway (Variables бэкенда)
 
 1. **RESEND_API_KEY** — ключ из [resend.com](https://resend.com) → API Keys (начинается с `re_`).
-2. **RESEND_FROM_EMAIL** — для теста: `onboarding@resend.dev`; для продакшена — верифицированный домен (см. `docs/EMAIL_SMTP.md`).
+2. **RESEND_FROM_EMAIL** — для теста: `onboarding@resend.dev` (письма пойдут **только на email владельца Resend**). Для клиентов — верифицировать домен и указать адрес с него (см. `docs/EMAIL_SMTP.md`).
 
 После добавления переменных — **Redeploy** бэкенда (Deploy → Redeploy или новый коммит в репозиторий).
 
