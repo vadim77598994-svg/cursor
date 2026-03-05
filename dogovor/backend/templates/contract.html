@@ -4,22 +4,22 @@
   <meta charset="UTF-8" />
   <title>Договор {{ contract_number }}</title>
   <style>
-    /* xhtml2pdf подхватывает шрифт только через @font-face; link_callback возвращает путь к файлу */
+    /* xhtml2pdf подхватывает шрифт только через @font-face; link_callback возвращает путь к файлу. Компактные отступы по образцу скриншотов. */
     {% if font_available %}@font-face { font-family: 'DejaVuSans'; src: url('fonts/DejaVuSans.ttf'); }{% endif %}
-    body { font-family: DejaVuSans, sans-serif; font-size: 10pt; line-height: 1.4; padding: 24px; color: #000; }
-    h1 { font-size: 14pt; text-align: center; margin-bottom: 20px; }
-    h2 { font-size: 11pt; font-weight: bold; margin-top: 18px; margin-bottom: 10px; }
-    .meta { margin-bottom: 12px; color: #333; }
-    p { margin: 8px 0; text-align: justify; }
-    ul { margin: 8px 0; padding-left: 22px; }
-    li { margin: 5px 0; text-align: justify; }
-    .signature-block { margin-top: 24px; }
-    .requisites { font-size: 9pt; color: #555; margin-top: 24px; }
-    .appendix { margin-top: 28px; page-break-before: always; }
-    .appendix h2 { margin-top: 0; }
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
-    th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; vertical-align: top; }
-    .sig-table td { padding: 10px 12px; }
+    body { font-family: DejaVuSans, sans-serif; font-size: 10pt; line-height: 1.25; padding: 18px; color: #000; }
+    h1 { font-size: 14pt; text-align: center; margin-bottom: 12px; }
+    h2 { font-size: 11pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
+    .meta { margin-bottom: 6px; color: #333; }
+    p { margin: 4px 0; text-align: justify; }
+    ul { margin: 4px 0; padding-left: 20px; }
+    li { margin: 2px 0; text-align: justify; }
+    .signature-block { margin-top: 12px; }
+    .requisites { font-size: 9pt; color: #555; margin-top: 12px; }
+    .appendix { margin-top: 16px; page-break-before: always; }
+    .appendix h2 { margin-top: 0; margin-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 9pt; }
+    th, td { border: 1px solid #333; padding: 5px 8px; text-align: left; vertical-align: top; }
+    .sig-table td { padding: 8px 10px; }
   </style>
 </head>
 <body>
@@ -111,7 +111,7 @@
 <table class="sig-table">
   <tr>
     <td width="50%"><strong>Пациент</strong><br />ФИО {{ patient_fio }}<br />Дата рождения: {{ patient_birth_date }}<br />Паспорт серии {{ passport_series }} № {{ passport_number }}, выдан {{ passport_date }}, {{ passport_issued_by }}<br />Зарегистрирован по адресу: {{ reg_address }}<br /><br />Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% else %}_______________________{% endif %} / {{ patient_fio }}</td>
-    <td width="50%"><strong>Исполнитель</strong><br />ООО «ПАЙ ОПТИКС»<br />Юридический адрес: 191025, г. Санкт-Петербург, ул. Рубинштейна, д. 10 лит. А, помещ. 1-н.<br />ИНН 7715944987, КПП 784001001, ОГРН 1127747200855<br />Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com<br /><br />Оптометрист {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% endif %} _______________/ {{ staff_fio }}</td>
+    <td width="50%"><strong>Исполнитель</strong><br />ООО «ПАЙ ОПТИКС»<br />Юридический адрес: 191025, г. Санкт-Петербург, ул. Рубинштейна, д. 10 лит. А, помещ. 1-н.<br />ИНН 7715944987, КПП 784001001, ОГРН 1127747200855<br />Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com<br /><br />Оптометрист {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% endif %} _______________/ {{ staff_fio }}</td>
   </tr>
 </table>
 
@@ -122,7 +122,7 @@
   <p>Я, Пациент, паспортные данные указаны в преамбуле Договора, даю информированное добровольное согласие на виды медицинских вмешательств, включенных в Перечень определенных видов медицинских вмешательств, на которые граждане дают информированное добровольное согласие при выборе оптометриста и медицинской организации для получения первичной медико-санитарной помощи, утвержденный приказом Минздравсоцразвития России от 23 апреля 2012 года № 390н (зарегистрирован Минюстом России 5 мая 2012 г. № 24082) (далее – «Перечень видов медицинских вмешательств»), при оказании мне или лицу, чьим законным представителем я являюсь (не заполнять если неприменимо).</p>
   <p>первичной медико-санитарной помощи в ООО "ПАЙ ОПТИКС" медицинским работником: {{ staff_fio }}.</p>
   <p>Я ознакомлен с Перечнем видов медицинских вмешательств, в доступной для меня форме мне даны разъяснения о целях, методах оказания медицинской помощи, связанном с ними риске, возможных вариантах медицинского вмешательства, о его последствиях, а также о предполагаемых результатах оказания медицинской помощи. Мне разъяснено, что при оформлении настоящего добровольного информированного согласия, а также перед осуществлением медицинского вмешательства, включенного в Перечень видов медицинских вмешательств, я имею право отказаться от одного или нескольких вышеуказанных видов медицинского вмешательства.</p>
-  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} ___________________________/ {{ staff_fio }}</p>
+  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} ___________________________/ {{ staff_fio }}</p>
   <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
 </div>
 
@@ -152,7 +152,7 @@
   <p>2. Указанные в п.1 настоящего Акта Услуги согласно Договору оказаны в полном объеме.</p>
   <p>3. Заказчик замечаний, претензий по количеству и качеству Услуг, оказанных Исполнителем не имеет.</p>
   <p>4. Настоящий Акт составлен в двух экземплярах, по одному для каждой из сторон.</p>
-  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} ____________________________/ {{ staff_fio }}</p>
+  <p>Исполнитель {% if staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} ____________________________/ {{ staff_fio }}</p>
   <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
 </div>
 
