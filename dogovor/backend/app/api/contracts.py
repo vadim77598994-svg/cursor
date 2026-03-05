@@ -8,6 +8,7 @@ from app.models.contracts import GenerateContractRequest
 from app.services.contract_number import get_next_contract_number
 from app.services.email_send import send_contract_pdf
 from app.services.pdf_render import render_contract_pdf
+from app.services.signature_resize import fetch_and_resize_signature
 from app.services.storage_upload import upload_contract_pdf
 
 router = APIRouter()
@@ -46,6 +47,9 @@ def generate_contract(body: GenerateContractRequest):
         )
         staff_fio = staff_row.data["fio"] if staff_row.data else ""
         staff_signature_url = (staff_row.data or {}).get("signature_image_url") or ""
+        staff_signature_data_url = None
+        if staff_signature_url:
+            staff_signature_data_url = fetch_and_resize_signature(staff_signature_url, max_height_px=42)
 
         contract_number = get_next_contract_number(prefix)
         logger.info("Contract number allocated: %s", contract_number)
@@ -59,6 +63,7 @@ def generate_contract(body: GenerateContractRequest):
             "cabinet_address": cabinet_address,
             "staff_fio": staff_fio,
             "staff_signature_url": staff_signature_url,
+            "staff_signature_data_url": staff_signature_data_url,
             "patient_fio": _safe(body.patient.patient_fio),
             "patient_birth_date": _safe(body.patient.patient_birth_date),
             "passport_series": _safe(body.patient.passport_series),

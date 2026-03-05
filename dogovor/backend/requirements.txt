@@ -12,3 +12,5 @@ xhtml2pdf==0.2.16
 python-docx==1.1.2
 # Resend — отправка писем по API (для Railway, где SMTP заблокирован)
 resend>=2.0.0,<3
+# Ресайз подписи оптометриста для PDF (предсказуемый размер в xhtml2pdf)
+Pillow>=10.0.0
