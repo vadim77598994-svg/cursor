@@ -99,8 +99,8 @@
 <h2>7. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</h2>
 <table class="sig-table">
   <tr>
-    <td width="50%"><strong>Пациент</strong><br />ФИО {{ patient_fio }}<br />Дата рождения: {{ patient_birth_date }}<br />Паспорт серии {{ passport_series }} № {{ passport_number }}, выдан {{ passport_date }}, {{ passport_issued_by }}<br />Зарегистрирован по адресу: {{ reg_address }}<br /><br />Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% else %}_______________________{% endif %} / {{ patient_fio }}</td>
-    <td width="50%"><strong>Исполнитель</strong><br />ООО «ПАЙ ОПТИКС»<br />Юридический адрес: 191025, г. Санкт-Петербург, ул. Рубинштейна, д. 10 лит. А, помещ. 1-н.<br />ИНН 7715944987, КПП 784001001, ОГРН 1127747200855<br />Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com<br /><br />Оптометрист {% if staff_signature_data_url %}<img src="{{ staff_signature_data_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% elif staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% endif %} _______________/ {{ staff_fio }}</td>
+    <td width="50%"><strong>Пациент</strong><br />ФИО {{ patient_fio }}<br />Дата рождения: {{ patient_birth_date }}<br />Паспорт серии {{ passport_series }} № {{ passport_number }}, выдан {{ passport_date }}, {{ passport_issued_by }}<br />Зарегистрирован по адресу: {{ reg_address }}<br /><br />Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 28px; vertical-align: middle;" />{% else %} {% endif %} / {{ patient_fio }}</td>
+    <td width="50%"><strong>Исполнитель</strong><br />ООО «ПАЙ ОПТИКС»<br />Юридический адрес: 191025, г. Санкт-Петербург, ул. Рубинштейна, д. 10 лит. А, помещ. 1-н.<br />ИНН 7715944987, КПП 784001001, ОГРН 1127747200855<br />Тел.: 8-800-555-24-97, E-mail: hello@pyeoptics.com<br /><br />Оптометрист {% if staff_signature_data_url %}<img src="{{ staff_signature_data_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% elif staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 42px; vertical-align: middle;" />{% endif %} / {{ staff_fio }}</td>
   </tr>
 </table>
 
@@ -146,8 +146,8 @@
   <p>2. Указанные в п.1 настоящего Акта Услуги согласно Договору оказаны в полном объеме.</p>
   <p>3. Заказчик замечаний, претензий по количеству и качеству Услуг, оказанных Исполнителем не имеет.</p>
   <p>4. Настоящий Акт составлен в двух экземплярах, по одному для каждой из сторон.</p>
-  <p>Исполнитель {% if staff_signature_data_url %}<img src="{{ staff_signature_data_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% elif staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} ____________________________/ {{ staff_fio }}</p>
-  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} _______________/ {{ patient_fio }}</p>
+  <p>Исполнитель {% if staff_signature_data_url %}<img src="{{ staff_signature_data_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% elif staff_signature_url %}<img src="{{ staff_signature_url }}" alt="подпись" style="height: 36px; vertical-align: middle;" />{% endif %} / {{ staff_fio }}</p>
+  <p>Пациент {% if patient_signature_data_url %}<img src="{{ patient_signature_data_url }}" alt="подпись" style="height: 24px; vertical-align: middle;" />{% endif %} / {{ patient_fio }}</p>
 </div>
 
 </body>
