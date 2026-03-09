@@ -59,6 +59,33 @@ export type GenerateContractResult = {
   message?: string;
 };
 
+/** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются на сервере. */
+export async function recognizePassport(
+  imageSpread: File,
+  imageRegistration?: File | null
+): Promise<Partial<PatientData>> {
+  const form = new FormData();
+  form.append("image_spread", imageSpread);
+  if (imageRegistration) form.append("image_registration", imageRegistration);
+  const res = await fetch(`${API_BASE}/api/v1/passport/recognize`, {
+    method: "POST",
+    body: form,
+  });
+  if (res.status === 503) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Сервис распознавания не настроен");
+  }
+  if (res.status === 422) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось распознать паспорт");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Ошибка распознавания");
+  }
+  return res.json();
+}
+
 const GENERATE_CONTRACT_TIMEOUT_MS = 120_000;
 
 export async function generateContract(

@@ -14,13 +14,25 @@ function normalizeDate(d: string, m: string, y: string): string | null {
 
 /**
  * Извлекает значение после метки в строке (метку игнорируем).
- * Пример: "Фамилия ИВАНОВ" → "ИВАНОВ", "Дата рождения 01.02.1990" → "01.02.1990"
  */
 function valueAfterLabel(line: string, labelPattern: RegExp): string | null {
   const match = line.match(labelPattern);
   if (!match) return null;
   const rest = line.slice(match.index! + match[0].length).trim();
   return rest.length > 0 ? rest : null;
+}
+
+/** Оставляет только кириллицу, пробелы, дефис — убирает мусор OCR (латиница, символы). */
+function cleanCyrillicPart(s: string | null): string | null {
+  if (!s || !s.trim()) return null;
+  const cleaned = s.replace(/[^А-Яа-яёЁ\s-]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned.length >= 2 ? cleaned : null;
+}
+
+/** Проверка: строка из 4 цифр — не год (1950–2030), чтобы не путать серию с годом. */
+function isLikelyYearFourDigits(s: string): boolean {
+  const n = parseInt(s, 10);
+  return n >= 1950 && n <= 2030;
 }
 
 /**
@@ -50,9 +62,9 @@ export function parseSpreadOcr(rawText: string): Partial<PatientData> {
       return next.replace(/\d{6,}/g, "").trim();
     return null;
   }
-  const surname = valueAfterLabelInLines(/фамилия\s*/i);
-  const name = valueAfterLabelInLines(/имя\.?\s*/i);
-  const patronymic = valueAfterLabelInLines(/отчество\s*/i);
+  const surname = cleanCyrillicPart(valueAfterLabelInLines(/фамилия\s*/i));
+  const name = cleanCyrillicPart(valueAfterLabelInLines(/имя\.?\s*/i));
+  const patronymic = cleanCyrillicPart(valueAfterLabelInLines(/отчество\s*/i));
   if (surname || name || patronymic) {
     result.patient_fio = [surname, name, patronymic].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     if (result.patient_fio.length < 3) result.patient_fio = undefined;
@@ -73,34 +85,73 @@ export function parseSpreadOcr(rawText: string): Partial<PatientData> {
     }
   }
 
-  // —— Дата рождения — после метки "Дата рождения"
+  // —— Все даты ДД.ММ.ГГГГ из текста (для разбора по хронологии)
+  const allDatesRaw = [...text.matchAll(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g)];
+  const allDates = allDatesRaw
+    .map((m) => normalizeDate(m[1], m[2], m[3]))
+    .filter(Boolean) as string[];
+
+  // —— Дата рождения и дата выдачи: по меткам, но если OCR перепутал значения — назначаем по хронологии (ранняя = рождение, поздняя = выдача)
+  let dateByBirthLabel: string | null = null;
+  let dateByIssueLabel: string | null = null;
   const birthLabelIdx = lines.findIndex((l) => /дата\s+рождения/i.test(l));
   if (birthLabelIdx >= 0) {
     const onSameLine = valueAfterLabel(lines[birthLabelIdx], /дата\s+рождения\s*/i);
     const birthDateMatch = (onSameLine ?? lines[birthLabelIdx + 1] ?? "").match(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/);
-    if (birthDateMatch) {
-      const normalized = normalizeDate(birthDateMatch[1], birthDateMatch[2], birthDateMatch[3]);
-      if (normalized) result.patient_birth_date = normalized;
+    if (birthDateMatch) dateByBirthLabel = normalizeDate(birthDateMatch[1], birthDateMatch[2], birthDateMatch[3]);
+  }
+  const issueLabelIdx = lines.findIndex((l) => /дата\s+выдачи/i.test(l));
+  if (issueLabelIdx >= 0) {
+    const onSameLine = valueAfterLabel(lines[issueLabelIdx], /дата\s+выдачи\s*/i);
+    const dateMatch = (onSameLine ?? lines[issueLabelIdx + 1] ?? "").match(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/);
+    if (dateMatch) dateByIssueLabel = normalizeDate(dateMatch[1], dateMatch[2], dateMatch[3]);
+  }
+  if (dateByBirthLabel && dateByIssueLabel) {
+    const earlier = dateByBirthLabel < dateByIssueLabel ? dateByBirthLabel : dateByIssueLabel;
+    const later = dateByBirthLabel > dateByIssueLabel ? dateByBirthLabel : dateByIssueLabel;
+    result.patient_birth_date = earlier;
+    result.passport_date = later;
+  } else if (dateByBirthLabel) {
+    result.patient_birth_date = dateByBirthLabel;
+    const other = allDates.find((d) => d !== dateByBirthLabel);
+    if (other) result.passport_date = other;
+  } else if (dateByIssueLabel) {
+    result.passport_date = dateByIssueLabel;
+    const other = allDates.find((d) => d !== dateByIssueLabel);
+    if (other) result.patient_birth_date = other;
+  } else if (allDates.length >= 2) {
+    const sorted = [...allDates].sort();
+    result.patient_birth_date = sorted[0];
+    result.passport_date = sorted[sorted.length - 1];
+  } else if (allDates.length === 1) {
+    result.patient_birth_date = allDates[0];
+  }
+
+  // —— Серия: 4 цифры (не год 1950–2030 — иначе OCR мог подставить год из даты)
+  const seriesCandidates = text.match(/\b(\d{2}\s?\d{2})\b/g) ?? [];
+  for (const cand of seriesCandidates) {
+    const four = cand.replace(/\s/g, "");
+    if (!isLikelyYearFourDigits(four)) {
+      result.passport_series = cand.replace(/\s/g, " ").trim();
+      break;
     }
   }
-  if (!result.patient_birth_date) {
-    const allDates = [...text.matchAll(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g)];
-    const normalized = allDates.map((m) => normalizeDate(m[1], m[2], m[3])).filter(Boolean) as string[];
-    if (normalized.length >= 2) result.patient_birth_date = normalized[0];
-    else if (normalized.length === 1) result.patient_birth_date = normalized[0];
-  }
-
-  // —— Серия: 4 цифры (в паспорте по вертикали — в OCR могут идти подряд или с пробелом 40 05)
-  const seriesMatch = text.match(/\b(\d{2}\s?\d{2})\b/);
-  if (seriesMatch) result.passport_series = seriesMatch[1].replace(/\s/g, " ").trim();
   if (!result.passport_series) {
-    const fourDigits = text.match(/(\d{4})/);
-    if (fourDigits) result.passport_series = fourDigits[1];
+    const fourMatch = text.match(/\b(\d{4})\b/g);
+    if (fourMatch) {
+      const notYear = fourMatch.find((s) => !isLikelyYearFourDigits(s));
+      if (notYear) result.passport_series = notYear;
+    }
   }
 
-  // —— Номер: 6 цифр (вертикально в паспорте)
-  const numberMatch = text.match(/\b(\d{6})\b/);
-  if (numberMatch) result.passport_number = numberMatch[1];
+  // —— Номер: 6 цифр (не путать с серией; в паспорте номер идёт после серии)
+  const numberMatch = text.match(/\b(\d{6})\b/g);
+  if (numberMatch) {
+    const excludeSeries = result.passport_series?.replace(/\s/g, "") ?? "";
+    const sixDigit = numberMatch.find((s) => s !== excludeSeries && !isLikelyYearFourDigits(s.slice(0, 4)));
+    if (sixDigit) result.passport_number = sixDigit;
+    else result.passport_number = numberMatch[0];
+  }
 
   // —— Выдан — блок "Паспорт выдан" (многострочный), до "Дата выдачи" или "Код подразделения"
   const issuedStart = lines.findIndex((l) => /паспорт\s+выдан/i.test(l));
@@ -120,23 +171,6 @@ export function parseSpreadOcr(rawText: string): Partial<PatientData> {
   if (!result.passport_issued_by) {
     const m = text.match(/паспорт\s+выдан\s*([\s\S]+?)(?=дата\s+выдачи|код\s+подразделения|$)/i);
     if (m && m[1].trim().length > 3) result.passport_issued_by = m[1].trim().replace(/\s+/g, " ").slice(0, 300);
-  }
-
-  // —— Дата выдачи — после "Дата выдачи"
-  const issueLabelIdx = lines.findIndex((l) => /дата\s+выдачи/i.test(l));
-  if (issueLabelIdx >= 0) {
-    const onSameLine = valueAfterLabel(lines[issueLabelIdx], /дата\s+выдачи\s*/i);
-    const dateMatch = (onSameLine ?? lines[issueLabelIdx + 1] ?? "").match(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/);
-    if (dateMatch) {
-      const normalized = normalizeDate(dateMatch[1], dateMatch[2], dateMatch[3]);
-      if (normalized) result.passport_date = normalized;
-    }
-  }
-  if (!result.passport_date && result.patient_birth_date) {
-    const allDates = [...text.matchAll(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g)];
-    const normalized = allDates.map((m) => normalizeDate(m[1], m[2], m[3])).filter(Boolean) as string[];
-    const issueDate = normalized.find((d) => d !== result.patient_birth_date);
-    if (issueDate) result.passport_date = issueDate;
   }
 
   return result;
@@ -196,6 +230,93 @@ export function parseRegistrationOcr(rawText: string): { reg_address?: string } 
   }
 
   return { reg_address: parts.join(", ").slice(0, 250) };
+}
+
+/**
+ * Парсит серию и номер из второй строки МЧЗ (44 символа).
+ * Приказ МВД 851: позиции 1–3 = первые 3 цифры серии, 4–9 = номер, позиция 29 = 4-я цифра серии.
+ */
+export function parseSeriesNumberFromMRZ(line2: string): {
+  passport_series?: string;
+  passport_number?: string;
+} {
+  const s = line2.replace(/\s/g, "").replace(/[<>]/g, "");
+  if (s.length < 9) return {};
+  const three = s.slice(0, 3).replace(/\D/g, "");
+  const six = s.slice(3, 9).replace(/\D/g, "");
+  if (three.length !== 3 || six.length !== 6) return {};
+  const fourth = s.length >= 29 ? s.slice(28, 29).replace(/\D/g, "") : "";
+  const series = fourth ? three + fourth : three + "0";
+  if (!/^\d{4}$/.test(series)) return {};
+  return {
+    passport_series: series,
+    passport_number: six,
+  };
+}
+
+/**
+ * Из сырого текста OCR зоны МЧЗ находит вторую строку (44 символа) и парсит серию/номер.
+ */
+export function parseMRZRawForSeriesNumber(rawText: string): {
+  passport_series?: string;
+  passport_number?: string;
+} {
+  const lines = rawText.split(/\r?\n/).map((l) => l.replace(/\s/g, "").replace(/[<>]/g, ""));
+  for (const line of lines) {
+    if (line.length >= 44) {
+      const parsed = parseSeriesNumberFromMRZ(line.slice(0, 44));
+      if (parsed.passport_series && parsed.passport_number) return parsed;
+    }
+  }
+  const merged = rawText.replace(/\s/g, "").replace(/[<>]/g, "");
+  const nineMatch = merged.match(/\d{9}/);
+  if (nineMatch) {
+    const nine = nineMatch[0];
+    const idx = merged.indexOf(nine);
+    const fourth = (merged[idx + 9] ?? "").match(/\d/) ? merged[idx + 9] : "";
+    return {
+      passport_series: nine.slice(0, 3) + (fourth || "0"),
+      passport_number: nine.slice(3, 9),
+    };
+  }
+  return {};
+}
+
+/**
+ * Парсит только серию и номер из текста, полученного с повёрнутой области (crop + rotate 90°).
+ * В вырезанной области — только вертикальный столбик цифр, после поворота: 4 цифры + 6 цифр.
+ */
+export function parseSeriesNumberFromCrop(rawText: string): {
+  passport_series?: string;
+  passport_number?: string;
+} {
+  const digitsOnly = rawText.replace(/\D/g, "");
+  const result: { passport_series?: string; passport_number?: string } = {};
+  if (digitsOnly.length >= 4) {
+    const four = digitsOnly.slice(0, 4);
+    if (!isLikelyYearFourDigits(four)) result.passport_series = four;
+  }
+  if (digitsOnly.length >= 10) {
+    const series = result.passport_series ?? digitsOnly.slice(0, 4);
+    const afterSeries = digitsOnly.slice(4);
+    const six = afterSeries.slice(0, 6);
+    if (six.length === 6 && !isLikelyYearFourDigits(six.slice(0, 4)))
+      result.passport_number = six;
+  }
+  if (!result.passport_series && digitsOnly.length >= 4) {
+    for (let i = 0; i <= digitsOnly.length - 4; i++) {
+      const four = digitsOnly.slice(i, i + 4);
+      if (!isLikelyYearFourDigits(four)) {
+        result.passport_series = four;
+        break;
+      }
+    }
+  }
+  if (!result.passport_number && digitsOnly.length >= 6) {
+    const sixMatch = rawText.match(/\d{6}/);
+    if (sixMatch) result.passport_number = sixMatch[0];
+  }
+  return result;
 }
 
 /**

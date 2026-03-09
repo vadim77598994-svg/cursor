@@ -2,8 +2,9 @@
 
 import { useRef, useState, useCallback } from "react";
 import type { PatientData } from "@/lib/api";
-import { parseSpreadOcr, parseRegistrationOcr } from "@/lib/parsePassportOcr";
-import { preprocessForOcr } from "@/lib/preprocessImage";
+import { recognizePassport } from "@/lib/api";
+import { parseSpreadOcr, parseRegistrationOcr, parseSeriesNumberFromCrop, parseMRZRawForSeriesNumber } from "@/lib/parsePassportOcr";
+import { preprocessForOcr, extractSeriesNumberRegion, extractMRZRegion } from "@/lib/preprocessImage";
 import { PassportTemplateGuide } from "@/components/PassportTemplateGuide";
 
 const IMAGE_CLEAR_MS = 30_000;
@@ -24,6 +25,8 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Файл разворота храним для вызова Beorg с двумя фото (разворот + прописка). Не сбрасываем при Tesseract. */
+  const [spreadFileForApi, setSpreadFileForApi] = useState<File | null>(null);
 
   const clearImage = useCallback(() => {
     if (clearTimerRef.current) {
@@ -45,6 +48,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
     setFile(f);
+    if (phase === "spread") setSpreadFileForApi(f);
     clearTimerRef.current = setTimeout(clearImage, IMAGE_CLEAR_MS);
   };
 
@@ -64,15 +68,37 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
           },
         });
         const { data } = await worker.recognize(blob);
-        await worker.terminate();
+        let parsed: Partial<PatientData>;
         if (isSpread) {
-          const parsed = parseSpreadOcr(data.text);
+          parsed = parseSpreadOcr(data.text);
+          try {
+            const mrzBlob = await extractMRZRegion(imageFile);
+            const { data: mrzData } = await worker.recognize(mrzBlob);
+            const fromMRZ = parseMRZRawForSeriesNumber(mrzData.text);
+            if (fromMRZ.passport_series) parsed.passport_series = fromMRZ.passport_series;
+            if (fromMRZ.passport_number) parsed.passport_number = fromMRZ.passport_number;
+          } catch {
+            // МЧЗ не распознана — пробуем вертикальную область
+          }
+          if (!parsed.passport_series || !parsed.passport_number) {
+            try {
+              const cropBlob = await extractSeriesNumberRegion(imageFile);
+              const { data: cropData } = await worker.recognize(cropBlob);
+              const fromCrop = parseSeriesNumberFromCrop(cropData.text);
+              if (fromCrop.passport_series) parsed.passport_series = fromCrop.passport_series;
+              if (fromCrop.passport_number) parsed.passport_number = fromCrop.passport_number;
+            } catch {
+              // область серия/номер не распознана
+            }
+          }
+          await worker.terminate();
           setSpreadData(parsed);
           clearImage();
           setPhase("registration");
           setFile(null);
         } else {
-          const parsed = parseRegistrationOcr(data.text);
+          await worker.terminate();
+          parsed = parseRegistrationOcr(data.text);
           clearImage();
           onRecognized({ ...spreadData, ...parsed });
         }
@@ -112,8 +138,50 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
 
   const handleBackToSpread = () => {
     setSpreadData(null);
+    setSpreadFileForApi(null);
     setPhase("spread");
     setError(null);
+  };
+
+  const handleBeorgRecognize = async () => {
+    if (phase === "spread") {
+      if (!file) {
+        setError("Сначала выберите или сделайте фото разворота");
+        return;
+      }
+      setError(null);
+      setLoading(true);
+      try {
+        const result = await recognizePassport(file);
+        setSpreadData(result);
+        clearImage();
+        setFile(null);
+        setPhase("registration");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка распознавания");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    if (phase === "registration") {
+      if (!spreadFileForApi || !file) {
+        setError("Для распознавания через сервис нужны оба фото (разворот уже был — добавьте фото прописки и нажмите кнопку снова, или нажмите «Пропустить»).");
+        return;
+      }
+      setError(null);
+      setLoading(true);
+      try {
+        const result = await recognizePassport(spreadFileForApi, file);
+        setSpreadFileForApi(null);
+        clearImage();
+        onRecognized(result);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка распознавания");
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -193,28 +261,41 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             alt="Предпросмотр"
             className="max-h-48 w-full object-contain"
           />
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  clearImage();
+                  setError(null);
+                }}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                Убрать фото
+              </button>
+              <button
+                type="button"
+                onClick={handleRecognize}
+                disabled={loading}
+                className="flex-1 rounded-xl bg-medical-blue px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {loading
+                  ? `Распознаём… ${progress}%`
+                  : phase === "spread"
+                    ? "Распознать разворот"
+                    : "Распознать прописку"}
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                clearImage();
-                setError(null);
-              }}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+              onClick={handleBeorgRecognize}
+              disabled={
+                loading ||
+                (phase === "registration" && !spreadFileForApi)
+              }
+              className="rounded-xl border-2 border-emerald-600 bg-emerald-50 px-4 py-3 font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
             >
-              Убрать фото
-            </button>
-            <button
-              type="button"
-              onClick={handleRecognize}
-              disabled={loading}
-              className="flex-1 rounded-xl bg-medical-blue px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {loading
-                ? `Распознаём… ${progress}%`
-                : phase === "spread"
-                  ? "Распознать разворот"
-                  : "Распознать прописку"}
+              {loading ? "Ожидание…" : "Распознать через сервис (Beorg)"}
             </button>
           </div>
         </div>

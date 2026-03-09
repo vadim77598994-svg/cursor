@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = ""
     resend_from_name: str = "Пай Оптикс"
+    # Beorg API (распознавание паспорта РФ: разворот + прописка). Пустые = эндпоинт /passport/recognize недоступен.
+    beorg_project_id: str = ""
+    beorg_token: str = ""
+    beorg_machine_uid: str = ""
 
     class Config:
         env_file = ".env"

@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import locations, staff, contracts
+from app.api import locations, passport, staff, contracts
 from app.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(locations.router, prefix="/api/v1", tags=["locations"])
 app.include_router(staff.router, prefix="/api/v1", tags=["staff"])
 app.include_router(contracts.router, prefix="/api/v1", tags=["contracts"])
+app.include_router(passport.router, prefix="/api/v1", tags=["passport"])
 
 
 @app.get("/health")
