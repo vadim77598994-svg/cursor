@@ -1,5 +1,6 @@
 """
 Распознавание паспорта через Beorg API. Фото не сохраняются — только в памяти на время запроса.
+Импорт beorg_recognize отложен до первого вызова, чтобы при отсутствии httpx или ошибке зависимостей приложение не падало при старте.
 """
 import logging
 from typing import Optional
@@ -7,7 +8,6 @@ from typing import Optional
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.config import settings
-from app.services.beorg_recognize import recognize_passport
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -41,6 +41,14 @@ async def passport_recognize(
             status_code=503,
             detail="Сервис распознавания паспорта не настроен (Beorg). Используйте ручной ввод или настройте BEORG_* в переменных окружения.",
         )
+    try:
+        from app.services.beorg_recognize import recognize_passport
+    except ImportError as e:
+        logger.warning("Beorg recognize import failed: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="Модуль распознавания паспорта недоступен (проверьте зависимости, например httpx).",
+        ) from e
     if not image_spread.content_type or not image_spread.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Файл разворота должен быть изображением")
     spread_bytes = _read_upload_in_memory(image_spread)
