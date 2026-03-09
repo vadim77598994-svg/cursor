@@ -13,6 +13,15 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@router.get("/passport/status")
+def passport_status():
+    """Статус сервиса распознавания: настроен ли Beorg (без раскрытия секретов)."""
+    configured = bool(
+        settings.beorg_project_id and settings.beorg_token and settings.beorg_machine_uid
+    )
+    return {"beorg_configured": configured}
+
+
 def _read_upload_in_memory(file: UploadFile, max_size: int = 20 * 1024 * 1024) -> bytes | None:
     """Читает файл в память (не на диск). max_size = 20 MB."""
     try:

@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { PatientData } from "@/lib/api";
-import { recognizePassport } from "@/lib/api";
+import { recognizePassport, getPassportStatus } from "@/lib/api";
 import { parseSpreadOcr, parseRegistrationOcr, parseSeriesNumberFromCrop, parseMRZRawForSeriesNumber } from "@/lib/parsePassportOcr";
 import { preprocessForOcr, extractSeriesNumberRegion, extractMRZRegion } from "@/lib/preprocessImage";
 import { PassportTemplateGuide } from "@/components/PassportTemplateGuide";
@@ -26,7 +26,14 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [beorgConfigured, setBeorgConfigured] = useState<boolean | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getPassportStatus()
+      .then((s) => setBeorgConfigured(s.beorg_configured))
+      .catch(() => setBeorgConfigured(false));
+  }, []);
 
   const clearImage = useCallback(() => {
     if (clearTimerRef.current) {
@@ -166,9 +173,13 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             return;
           }
         } catch (apiErr) {
-          const msg = apiErr instanceof Error ? apiErr.message : "";
-          if (msg.includes("не настроен") || msg.includes("503")) {
-            // Beorg не настроен — fallback на Tesseract
+          const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+          const useFallback =
+            msg.includes("не настроен") ||
+            msg.includes("503") ||
+            /fetch|network|failed to fetch|load failed/i.test(msg);
+          if (useFallback) {
+            setBeorgConfigured(false);
           } else {
             setError(msg);
             setLoading(false);
@@ -189,9 +200,13 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             return;
           }
         } catch (apiErr) {
-          const msg = apiErr instanceof Error ? apiErr.message : "";
-          if (msg.includes("не настроен") || msg.includes("503")) {
-            // fallback на Tesseract только по прописке
+          const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+          const useFallback =
+            msg.includes("не настроен") ||
+            msg.includes("503") ||
+            /fetch|network|failed to fetch|load failed/i.test(msg);
+          if (useFallback) {
+            setBeorgConfigured(false);
           } else {
             setError(msg);
             setLoading(false);
@@ -240,6 +255,12 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Сканирование паспорта</h2>
+        {beorgConfigured === true && (
+          <p className="mt-1 text-sm text-green-700">Режим: Биорг (облако)</p>
+        )}
+        {beorgConfigured === false && (
+          <p className="mt-1 text-sm text-amber-700">Режим: локальное распознавание (Биорг недоступен — проверьте переменные BEORG_* на бэкенде)</p>
+        )}
         <p className="mt-1 text-gray-600">
           {phase === "spread"
             ? "Шаг 1: сфотографируйте разворот с фото (страницы 2–3). Разместите паспорт в кадре, избегайте бликов."
