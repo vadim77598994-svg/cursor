@@ -31,7 +31,10 @@ app.include_router(contracts.router, prefix="/api/v1", tags=["contracts"])
 try:
     from app.api import passport
     app.include_router(passport.router, prefix="/api/v1", tags=["passport"])
-    logger.info("Passport router loaded")
+    beorg_ok = bool(
+        settings.beorg_project_id and settings.beorg_token and settings.beorg_machine_uid
+    )
+    logger.info("Passport router loaded; Beorg: %s", "configured" if beorg_ok else "not configured (set BEORG_* in .env)")
 except Exception as e:
     logger.warning("Passport router not loaded (Beorg/httpx): %s", e)
 

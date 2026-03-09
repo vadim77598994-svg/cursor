@@ -230,6 +230,8 @@ INFO:     Application startup complete.
 
 Если при запуске видите ошибку про `SUPABASE_URL` или `SUPABASE_SERVICE_KEY` — проверьте, что в `.env` подставлены реальные значения и что файл лежит именно в `dogovor/backend`.
 
+**Распознавание паспорта (Beorg):** чтобы работал сторонний сервис Биорг, в `dogovor/backend/.env` должны быть заданы `BEORG_PROJECT_ID`, `BEORG_TOKEN`, `BEORG_MACHINE_UID`. После изменения `.env` **перезапустите бэкенд** (Ctrl+C и снова `uvicorn ...`), иначе переменные не подхватятся. В логах при старте должно быть: `Passport router loaded; Beorg: configured`. Зависимость `python-multipart` уже в `requirements.txt` (нужна для загрузки фото).
+
 ---
 
 ## Часть 3. Фронт (Next.js)
