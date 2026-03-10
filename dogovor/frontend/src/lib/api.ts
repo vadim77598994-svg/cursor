@@ -66,7 +66,9 @@ export async function getPassportStatus(): Promise<{ beorg_configured: boolean }
   return res.json();
 }
 
-/** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются на сервере. */
+const RECOGNIZE_PASSPORT_TIMEOUT_MS = 90_000;
+
+/** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются на сервере. Может занять до ~60 с. */
 export async function recognizePassport(
   imageSpread: File,
   imageRegistration?: File | null
@@ -74,10 +76,14 @@ export async function recognizePassport(
   const form = new FormData();
   form.append("image_spread", imageSpread);
   if (imageRegistration) form.append("image_registration", imageRegistration);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), RECOGNIZE_PASSPORT_TIMEOUT_MS);
   const res = await fetch(`${API_BASE}/api/v1/passport/recognize`, {
     method: "POST",
     body: form,
+    signal: controller.signal,
   });
+  clearTimeout(timeoutId);
   if (res.status === 503) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || "Сервис распознавания не настроен");

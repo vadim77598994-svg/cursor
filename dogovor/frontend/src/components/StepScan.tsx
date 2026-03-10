@@ -352,7 +352,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
               className="flex-1 rounded-xl bg-medical-blue px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               {loading
-                ? `Распознаём… ${progress}%`
+                ? (progress > 0 ? `Распознаём… ${progress}%` : "Распознаём…")
                 : phase === "spread"
                   ? "Распознать разворот"
                   : "Распознать прописку"}

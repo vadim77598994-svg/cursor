@@ -13,8 +13,10 @@ logger = logging.getLogger(__name__)
 
 BEORG_ADD_URL = "https://api.beorg.ru/api/bescan/add_document"
 BEORG_RESULT_URL = "https://api.beorg.ru/api/document/result"
-POLL_INTERVAL = 2.0
-POLL_MAX_WAIT = 45.0
+# Beorg возвращает 425 Too Early, пока документ обрабатывается — ждём перед первым опросом и при 425 повторяем
+POLL_INITIAL_DELAY = 4.0
+POLL_INTERVAL = 3.0
+POLL_MAX_WAIT = 60.0
 
 
 def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_b64: list[str]) -> dict[str, Any] | None:
@@ -44,11 +46,15 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
     if not document_id:
         logger.warning("Beorg add_document: no document_id in response")
         return None
+    time.sleep(POLL_INITIAL_DELAY)
     deadline = time.monotonic() + POLL_MAX_WAIT
     while time.monotonic() < deadline:
-        time.sleep(POLL_INTERVAL)
         with httpx.Client(timeout=15.0) as client:
             r = client.get(f"{BEORG_RESULT_URL}/{document_id}", params={"token": token})
+            if r.status_code == 425:
+                logger.debug("Beorg 425 Too Early, retrying in %s s", POLL_INTERVAL)
+                time.sleep(POLL_INTERVAL)
+                continue
             r.raise_for_status()
             result = r.json()
         docs = result.get("documents") or []
@@ -59,6 +65,7 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
         if result.get("broken") is True:
             logger.warning("Beorg result: document marked broken")
             return None
+        time.sleep(POLL_INTERVAL)
     logger.warning("Beorg result: timeout waiting for result")
     return None
 
