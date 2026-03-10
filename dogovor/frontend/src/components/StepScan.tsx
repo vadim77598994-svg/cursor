@@ -289,12 +289,11 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={handleFile}
             disabled={loading}
           />
-          {phase === "spread" ? "Выбрать фото разворота / камера" : "Выбрать фото прописки / камера"}
+          {phase === "spread" ? "Фото разворота (камера или галерея)" : "Фото прописки (камера или галерея)"}
         </label>
         <button
           type="button"

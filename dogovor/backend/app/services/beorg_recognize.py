@@ -1,5 +1,8 @@
 """
 Распознавание паспорта РФ через Beorg API (разворот 2–3 и опционально страница прописки).
+Документация: https://docs.beorg.ru/api_docs/universal/passport_reg/
+- Один снимок: type PASSPORT; два снимка (разворот + прописка): type PASSPORT_REG, порядок images = process_info.
+- Ответ: documents[].data — LastName, FirstName, MiddleName, IssuedBy, IssueDate, Series, Number, BirthDate, Address.
 Фото в память не сохраняются: принимаем bytes, отправляем в API, возвращаем только извлечённые поля.
 """
 import base64
@@ -83,15 +86,36 @@ def _map_beorg_to_patient(data: dict[str, Any]) -> dict[str, str]:
     fio_parts = [p for p in (last, first, middle) if p]
     patient_fio = " ".join(fio_parts) if fio_parts else ""
 
+    # Защита: если в ФИО попал текст «кем выдан»/адрес (иногда Beorg путает блоки) — не подставлять
+    if patient_fio and _looks_like_issuer_or_address(patient_fio):
+        patient_fio = ""
+
+    issued_by = s(data.get("IssuedBy")) or s(data.get("IssuingAuthority")) or s(data.get("IssueAuthority"))
+
     return {
         "patient_fio": patient_fio,
         "patient_birth_date": s(data.get("BirthDate")),
         "passport_series": s(data.get("Series")),
         "passport_number": s(data.get("Number")),
-        "passport_issued_by": s(data.get("IssuedBy")),
+        "passport_issued_by": issued_by,
         "passport_date": s(data.get("IssueDate")),
         "reg_address": s(data.get("Address")),
     }
+
+
+def _looks_like_issuer_or_address(text: str) -> bool:
+    """Текст похож на «кем выдан» или адрес, а не на ФИО."""
+    t = text.upper()
+    return (
+        "В ГОР." in t or "ГОР." in t
+        or "ОБЛ." in t
+        or "ОВД" in t
+        or "ОТДЕЛЕН" in t
+        or "ОФМС" in t
+        or "УЛ." in t
+        or "УЛИЦА" in t
+        or "РЕГИОН" in t
+    )
 
 
 def recognize_passport(
