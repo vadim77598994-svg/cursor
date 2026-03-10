@@ -38,6 +38,7 @@ export function StepSignature({
   const [contractId, setContractId] = useState<string | null>(null);
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
 
   const getSignatureDataUrl = useCallback(() => {
     const canvas = canvasRef.current;
@@ -148,6 +149,7 @@ export function StepSignature({
       setContractId(result.contract_id ?? null);
       setPdfPath(result.pdf_path ?? null);
       setEmailSent(result.email_sent ?? false);
+      setEmailFailReason(result.email_fail_reason ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка при создании договора");
     } finally {
@@ -171,7 +173,9 @@ export function StepSignature({
         {emailSent ? (
           <p className="mt-2 text-green-700 font-medium">Договор отправлен на email клиента.</p>
         ) : (
-          <p className="mt-2 text-amber-700">Письмо не отправлено. Проверьте email в данных или настройки почты на сервере (Resend на Railway).</p>
+          <p className="mt-2 text-amber-700">
+            Письмо не отправлено.{emailFailReason ? ` ${emailFailReason}` : " Проверьте email в данных или настройки почты на сервере (Resend на Railway)."}
+          </p>
         )}
         <button
           type="button"

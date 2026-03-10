@@ -97,14 +97,17 @@ def generate_contract(body: GenerateContractRequest):
         logger.info("Contract row inserted: %s (id=%s)", contract_number, contract_id)
 
         email_sent = False
+        email_fail_reason: str | None = None
         to_email = (body.patient.patient_email or "").strip()
         if to_email and pdf_bytes:
-            email_sent = send_contract_pdf(
+            email_sent, email_fail_reason = send_contract_pdf(
                 to_email,
                 contract_number,
                 pdf_bytes,
                 body.patient.patient_fio or "",
             )
+        elif not to_email:
+            email_fail_reason = "Email не указан в данных пациента (шаг «Проверка данных»)."
 
         msg = "Договор создан. PDF сохранён в Storage."
         if not pdf_path:
@@ -117,6 +120,7 @@ def generate_contract(body: GenerateContractRequest):
             "contract_id": contract_id,
             "pdf_path": pdf_path,
             "email_sent": email_sent,
+            "email_fail_reason": email_fail_reason,
             "message": msg,
         }
     except HTTPException:

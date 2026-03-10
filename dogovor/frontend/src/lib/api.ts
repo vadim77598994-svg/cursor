@@ -56,6 +56,8 @@ export type GenerateContractResult = {
   contract_id?: string | null;
   pdf_path?: string | null;
   email_sent?: boolean;
+  /** Причина, если письмо не отправлено (нет email, Resend не настроен, ошибка API и т.д.) */
+  email_fail_reason?: string | null;
   message?: string;
 };
 
