@@ -227,15 +227,6 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     }
   };
 
-  const handleSkipRegistration = () => {
-    onRecognized({ ...spreadData });
-  };
-
-  const handleManualAddress = () => {
-    clearImage();
-    onRecognized({ ...spreadData });
-  };
-
   const handleManual = () => {
     clearImage();
     setSpreadData(null);
@@ -263,7 +254,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
         <p className="mt-1 text-neutral-500">
           {phase === "spread"
             ? "Шаг 1: сфотографируйте разворот с фото (страницы 2–3). Разместите паспорт в кадре, избегайте бликов."
-            : "Шаг 2: сфотографируйте страницу с пропиской. Если прописка от руки — нажмите «Ввести адрес вручную»."}
+            : "Шаг 2: сфотографируйте страницу с пропиской."}
         </p>
       </div>
 
@@ -301,27 +292,6 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
           Ввести вручную
         </button>
       </div>
-
-      {phase === "registration" && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleManualAddress}
-            disabled={loading}
-            className="min-h-touch rounded-lg border border-amber-500 bg-amber-50 px-4 py-3 font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-          >
-            Ввести адрес вручную
-          </button>
-          <button
-            type="button"
-            onClick={handleSkipRegistration}
-            disabled={loading}
-            className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
-          >
-            Пропустить (заполню на следующем шаге)
-          </button>
-        </div>
-      )}
 
       {previewUrl && (
         <div className="rounded-lg border border-neutral-200 bg-white p-2">

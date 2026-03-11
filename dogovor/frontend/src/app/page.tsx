@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { Location, Staff, PatientData } from "@/lib/api";
 import { StepCabinet } from "@/components/StepCabinet";
 import { StepScan } from "@/components/StepScan";
@@ -35,13 +36,23 @@ export default function DogovorPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-2xl px-4 py-8 pb-[env(safe-area-inset-bottom)]">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          Оформление договора
-        </h1>
-        <p className="mt-1 text-neutral-500">
-          ПАЙ ОПТИКС — кабинет проверки зрения
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-900">
+            Оформление договора
+          </h1>
+          <p className="mt-1 text-neutral-500">
+            ПАЙ ОПТИКС — кабинет проверки зрения
+          </p>
+        </div>
+        <Image
+          src="/logo.png"
+          alt="P.Y.E"
+          width={96}
+          height={32}
+          className="h-8 w-auto shrink-0 object-contain"
+          priority
+        />
       </div>
 
       {step > 0 && (
