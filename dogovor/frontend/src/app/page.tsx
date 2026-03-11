@@ -34,29 +34,42 @@ export default function DogovorPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8">
+    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8 pb-[env(safe-area-inset-bottom)]">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">
+        <h1 className="text-2xl font-semibold text-neutral-900">
           Оформление договора
         </h1>
-        <p className="mt-1 text-gray-600">
+        <p className="mt-1 text-neutral-500">
           ПАЙ ОПТИКС — кабинет проверки зрения
         </p>
       </div>
+
+      {step > 0 && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setStep(step - 1)}
+            className="flex min-h-[44px] items-center gap-2 text-neutral-600 hover:text-neutral-900"
+          >
+            <span aria-hidden>←</span>
+            <span>Назад</span>
+          </button>
+        </div>
+      )}
 
       <div className="mb-10">
         <div className="flex justify-between gap-1">
           {STEPS.map((label, i) => (
             <div
               key={label}
-              className={`h-2 flex-1 rounded-full transition ${
-                i <= step ? "bg-medical-blue" : "bg-gray-200"
+              className={`h-1.5 flex-1 rounded-full transition ${
+                i <= step ? "bg-neutral-900" : "bg-neutral-200"
               }`}
               title={label}
             />
           ))}
         </div>
-        <p className="mt-2 text-sm font-medium text-gray-600">
+        <p className="mt-2 text-sm font-medium text-neutral-500">
           Шаг {step + 1} из {STEPS.length}: {STEPS[step]}
         </p>
       </div>

@@ -18,7 +18,10 @@ export default {
         },
       },
       fontSize: {
-        base: ["18px", { lineHeight: "1.6" }],
+        base: ["16px", { lineHeight: "1.6" }],
+      },
+      minHeight: {
+        touch: "44px",
       },
     },
   },

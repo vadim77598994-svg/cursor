@@ -29,20 +29,20 @@ export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Проверка данных</h2>
-        <p className="mt-1 text-gray-600">Проверьте и при необходимости исправьте данные пациента</p>
+        <h2 className="text-xl font-semibold text-neutral-900">Проверка данных</h2>
+        <p className="mt-1 text-neutral-500">Проверьте и при необходимости исправьте данные пациента</p>
       </div>
 
       <div className="space-y-4">
         {fields.map(({ key, label, placeholder, type = "text" }) => (
           <div key={key}>
-            <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">{label}</label>
             <input
               type={type}
               value={patient[key] ?? ""}
               onChange={(e) => update(key, e.target.value)}
               placeholder={placeholder}
-              className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg focus:border-medical-blue focus:outline-none focus:ring-2 focus:ring-medical-blue/20"
+              className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-base focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
             />
           </div>
         ))}
@@ -52,7 +52,7 @@ export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
         type="button"
         onClick={onNext}
         disabled={!canNext}
-        className="w-full rounded-xl bg-medical-blue px-6 py-4 text-lg font-medium text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-h-touch w-full rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Далее — подпись
       </button>

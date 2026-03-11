@@ -5,7 +5,6 @@ import type { PatientData } from "@/lib/api";
 import { recognizePassport, getPassportStatus } from "@/lib/api";
 import { parseSpreadOcr, parseRegistrationOcr, parseSeriesNumberFromCrop, parseMRZRawForSeriesNumber } from "@/lib/parsePassportOcr";
 import { preprocessForOcr, extractSeriesNumberRegion, extractMRZRegion } from "@/lib/preprocessImage";
-import { PassportTemplateGuide } from "@/components/PassportTemplateGuide";
 
 const IMAGE_CLEAR_MS = 30_000;
 
@@ -254,30 +253,28 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Сканирование паспорта</h2>
+        <h2 className="text-xl font-semibold text-neutral-900">Сканирование паспорта</h2>
         {beorgConfigured === true && (
           <p className="mt-1 text-sm text-green-700">Режим: Биорг (облако)</p>
         )}
         {beorgConfigured === false && (
           <p className="mt-1 text-sm text-amber-700">Режим: локальное распознавание (Биорг недоступен — проверьте переменные BEORG_* на бэкенде)</p>
         )}
-        <p className="mt-1 text-gray-600">
+        <p className="mt-1 text-neutral-500">
           {phase === "spread"
             ? "Шаг 1: сфотографируйте разворот с фото (страницы 2–3). Разместите паспорт в кадре, избегайте бликов."
             : "Шаг 2: сфотографируйте страницу с пропиской. Если прописка от руки — нажмите «Ввести адрес вручную»."}
         </p>
       </div>
 
-      <PassportTemplateGuide view={phase} />
-
       {spreadData && phase === "registration" && (
-        <div className="rounded-xl bg-green-50 p-3 text-sm text-gray-700">
+        <div className="rounded-lg bg-green-50 p-3 text-sm text-neutral-700">
           <p className="font-medium text-green-800">Разворот распознан</p>
           <p className="mt-1 truncate">{spreadData.patient_fio || "—"}, {spreadData.passport_series || "—"} {spreadData.passport_number || "—"}</p>
           <button
             type="button"
             onClick={handleBackToSpread}
-            className="mt-2 text-medical-blue underline"
+            className="mt-2 text-neutral-900 underline"
           >
             Распознать разворот заново
           </button>
@@ -285,7 +282,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-medical-blue bg-medical-blueLight px-4 py-3 font-medium text-medical-blue">
+        <label className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-3 font-medium text-neutral-900 hover:bg-neutral-50">
           <input
             type="file"
             accept="image/*"
@@ -299,7 +296,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
           type="button"
           onClick={handleManual}
           disabled={loading}
-          className="rounded-xl border-2 border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
         >
           Ввести вручную
         </button>
@@ -311,7 +308,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             type="button"
             onClick={handleManualAddress}
             disabled={loading}
-            className="rounded-xl border-2 border-amber-500 bg-amber-50 px-4 py-3 font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            className="min-h-touch rounded-lg border border-amber-500 bg-amber-50 px-4 py-3 font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
           >
             Ввести адрес вручную
           </button>
@@ -319,7 +316,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             type="button"
             onClick={handleSkipRegistration}
             disabled={loading}
-            className="rounded-xl border-2 border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
           >
             Пропустить (заполню на следующем шаге)
           </button>
@@ -327,7 +324,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
       )}
 
       {previewUrl && (
-        <div className="rounded-xl border-2 border-gray-200 bg-white p-2">
+        <div className="rounded-lg border border-neutral-200 bg-white p-2">
           <img
             src={previewUrl}
             alt="Предпросмотр"
@@ -340,7 +337,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
                   clearImage();
                   setError(null);
                 }}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                className="min-h-touch rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
               >
                 Убрать фото
               </button>
@@ -348,7 +345,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
               type="button"
               onClick={handleRecognize}
               disabled={loading}
-              className="flex-1 rounded-xl bg-medical-blue px-4 py-3 font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="min-h-touch flex-1 rounded-lg bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
             >
               {loading
                 ? (progress > 0 ? `Распознаём… ${progress}%` : "Распознаём…")
@@ -361,7 +358,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
       )}
 
       {error && (
-        <div className="rounded-xl bg-red-50 p-4 text-red-800">{error}</div>
+        <div className="rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
       )}
     </div>
   );

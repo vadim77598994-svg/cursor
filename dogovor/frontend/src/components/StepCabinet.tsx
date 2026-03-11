@@ -61,7 +61,7 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-lg text-gray-500">Загрузка кабинетов…</p>
+        <p className="text-lg text-neutral-500">Загрузка кабинетов…</p>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
     const isLocalApi =
       API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1");
     return (
-      <div className="rounded-xl bg-red-50 p-6 text-red-800">
+      <div className="rounded-lg bg-red-50 p-6 text-red-800">
         <p className="font-medium">Сервер недоступен</p>
         <p className="mt-1">{error}</p>
         {isNetwork && (
@@ -111,8 +111,8 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Кабинет проверки зрения</h2>
-        <p className="mt-1 text-gray-600">Выберите точку оказания услуги</p>
+        <h2 className="text-xl font-semibold text-neutral-900">Кабинет проверки зрения</h2>
+        <p className="mt-1 text-neutral-500">Выберите точку оказания услуги</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-1">
@@ -121,32 +121,32 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
             key={loc.id}
             type="button"
             onClick={() => setSelectedLocation(loc)}
-            className={`rounded-xl border-2 p-4 text-left transition ${
-              selectedLocation?.id === loc.id
-                ? "border-medical-blue bg-medical-blue-light"
-                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-            }`}
+            className={`min-h-touch rounded-lg border p-4 text-left transition ${
+                selectedLocation?.id === loc.id
+                ? "border-neutral-900 bg-neutral-100"
+                : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
+              }`}
           >
             <span className="font-medium">{loc.name}</span>
-            <span className="mt-1 block text-sm text-gray-600">{loc.address}</span>
+            <span className="mt-1 block text-sm text-neutral-500">{loc.address}</span>
           </button>
         ))}
       </div>
 
       {selectedLocation && (
         <div>
-          <h3 className="mb-3 text-lg font-semibold text-gray-900">Оптометрист</h3>
+          <h3 className="mb-3 text-lg font-semibold text-neutral-900">Оптометрист</h3>
           <div className="grid gap-3 sm:grid-cols-1">
             {staffList.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => setSelectedStaff(s)}
-                className={`rounded-xl border-2 p-4 text-left transition ${
-                  selectedStaff?.id === s.id
-                    ? "border-medical-blue bg-medical-blue-light"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                }`}
+                className={`min-h-touch rounded-lg border p-4 text-left transition ${
+                    selectedStaff?.id === s.id
+                    ? "border-neutral-900 bg-neutral-100"
+                    : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
+                  }`}
               >
                 <span className="font-medium">{s.fio}</span>
               </button>
@@ -160,7 +160,7 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
           type="button"
           onClick={() => canNext && onNext(selectedLocation!, selectedStaff!)}
           disabled={!canNext}
-          className="w-full rounded-xl bg-medical-blue px-6 py-4 text-lg font-medium text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-touch w-full rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Далее — сканирование паспорта
         </button>

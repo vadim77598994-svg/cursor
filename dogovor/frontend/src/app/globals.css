@@ -2,13 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PYE-стиль: нейтральная база, тёмный акцент */
 :root {
-  --medical-blue: #007AFF;
-  --medical-blue-light: #E8F2FF;
+  --pye-bg: #fafafa;
+  --pye-text: #171717;
+  --pye-muted: #737373;
+  --pye-accent: #171717;
+  --pye-border: #e5e5e5;
 }
 
 body {
-  @apply bg-white text-gray-800 antialiased;
-  font-size: 18px;
+  @apply antialiased;
+  background-color: var(--pye-bg);
+  color: var(--pye-text);
+  font-size: 16px;
   line-height: 1.6;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

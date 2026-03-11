@@ -163,10 +163,10 @@ export function StepSignature({
         <p className="text-xl font-semibold text-green-800">Договор оформлен</p>
         <p className="mt-2 text-2xl font-bold text-green-900">№ {done}</p>
         {contractId && (
-          <p className="mt-2 text-sm text-gray-500">ID в БД: {contractId}</p>
+          <p className="mt-2 text-sm text-neutral-500">ID в БД: {contractId}</p>
         )}
         {pdfPath ? (
-          <p className="mt-4 text-gray-600">PDF сохранён: {pdfPath}</p>
+          <p className="mt-4 text-neutral-600">PDF сохранён: {pdfPath}</p>
         ) : (
           <p className="mt-4 text-amber-700">PDF не сгенерирован. Проверьте логи бэкенда и наличие xhtml2pdf; bucket «contracts» в Supabase Storage.</p>
         )}
@@ -180,7 +180,7 @@ export function StepSignature({
         <button
           type="button"
           onClick={onReset}
-          className="mt-6 rounded-xl bg-medical-blue px-6 py-3 text-white hover:opacity-90"
+          className="mt-6 min-h-touch rounded-lg bg-neutral-900 px-6 py-3 text-white hover:bg-neutral-800"
         >
           Оформить следующий договор
         </button>
@@ -191,16 +191,16 @@ export function StepSignature({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Подпись клиента</h2>
-        <p className="mt-1 text-gray-600">Клиент ставит подпись в поле ниже</p>
+        <h2 className="text-xl font-semibold text-neutral-900">Подпись клиента</h2>
+        <p className="mt-1 text-neutral-500">Клиент ставит подпись в поле ниже</p>
       </div>
 
-      <div className="rounded-xl border-2 border-gray-200 bg-white p-2">
+      <div className="rounded-lg border border-neutral-200 bg-white p-2">
         <canvas
           ref={canvasRef}
           width={600}
           height={220}
-          className="block w-full touch-none rounded-lg border border-gray-200"
+          className="block w-full touch-none rounded-lg border border-neutral-200"
           style={{ maxWidth: "100%", height: "auto", minHeight: 180 }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
@@ -217,7 +217,7 @@ export function StepSignature({
           type="button"
           onClick={clearCanvas}
           disabled={isSubmitting}
-          className="rounded-xl border-2 border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
         >
           Очистить
         </button>
@@ -225,13 +225,13 @@ export function StepSignature({
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex-1 rounded-xl bg-medical-blue px-6 py-4 text-lg font-medium text-white shadow-md transition hover:opacity-90 disabled:opacity-50"
+          className="min-h-touch flex-1 rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
         >
           {isSubmitting ? "Создание договора…" : "Сгенерировать договор"}
         </button>
       </div>
       {isSubmitting && (
-        <p className="text-center text-sm text-gray-500">Подождите, формируем PDF (до 2 мин)…</p>
+        <p className="text-center text-sm text-neutral-500">Подождите, формируем PDF (до 2 мин)…</p>
       )}
 
       {error && (
