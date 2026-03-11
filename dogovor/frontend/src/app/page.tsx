@@ -63,7 +63,7 @@ export default function DogovorPage() {
             <div
               key={label}
               className={`h-1.5 flex-1 rounded-full transition ${
-                i <= step ? "bg-neutral-900" : "bg-neutral-200"
+                i <= step ? "bg-[#0f0f0f]" : "bg-neutral-300"
               }`}
               title={label}
             />

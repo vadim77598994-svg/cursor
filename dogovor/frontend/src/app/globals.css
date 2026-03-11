@@ -2,13 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* PYE-стиль: нейтральная база, тёмный акцент */
+/* PYE-стиль: светло-серый фон, графит/чёрный акцент */
 :root {
-  --pye-bg: #fafafa;
+  --pye-bg: #dedede;
   --pye-text: #171717;
   --pye-muted: #737373;
-  --pye-accent: #171717;
-  --pye-border: #e5e5e5;
+  --pye-accent: #0f0f0f;
+  --pye-border: #d0d0d0;
 }
 
 body {
