@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import type { PatientData } from "@/lib/api";
-import { recognizePassport, getPassportStatus } from "@/lib/api";
-import { parseSpreadOcr, parseRegistrationOcr, parseSeriesNumberFromCrop, parseMRZRawForSeriesNumber } from "@/lib/parsePassportOcr";
-import { preprocessForOcr, extractSeriesNumberRegion, extractMRZRegion } from "@/lib/preprocessImage";
+import { recognizePassport } from "@/lib/api";
 
 const IMAGE_CLEAR_MS = 30_000;
 
@@ -25,14 +23,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [beorgConfigured, setBeorgConfigured] = useState<boolean | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    getPassportStatus()
-      .then((s) => setBeorgConfigured(s.beorg_configured))
-      .catch(() => setBeorgConfigured(false));
-  }, []);
 
   const clearImage = useCallback(() => {
     if (clearTimerRef.current) {
@@ -57,98 +48,6 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     clearTimerRef.current = setTimeout(clearImage, IMAGE_CLEAR_MS);
   };
 
-  const runOcr = useCallback(
-    async (imageFile: File, isSpread: boolean) => {
-      setError(null);
-      setLoading(true);
-      setProgress(0);
-      try {
-        const blob = await preprocessForOcr(imageFile);
-        const { createWorker } = await import("tesseract.js");
-        const worker = await createWorker(["rus", "eng"], 1, {
-          logger: (m) => {
-            if (m.status === "recognizing text" && typeof m.progress === "number") {
-              setProgress(Math.round(m.progress * 100));
-            }
-          },
-        });
-        const { data } = await worker.recognize(blob);
-        let parsed: Partial<PatientData>;
-        if (isSpread) {
-          parsed = parseSpreadOcr(data.text);
-          try {
-            const mrzBlob = await extractMRZRegion(imageFile);
-            const { data: mrzData } = await worker.recognize(mrzBlob);
-            const fromMRZ = parseMRZRawForSeriesNumber(mrzData.text);
-            if (fromMRZ.passport_series) parsed.passport_series = fromMRZ.passport_series;
-            if (fromMRZ.passport_number) parsed.passport_number = fromMRZ.passport_number;
-          } catch {
-            // МЧЗ не распознана — пробуем вертикальную область
-          }
-          if (!parsed.passport_series || !parsed.passport_number) {
-            try {
-              const cropBlob = await extractSeriesNumberRegion(imageFile);
-              const { data: cropData } = await worker.recognize(cropBlob);
-              const fromCrop = parseSeriesNumberFromCrop(cropData.text);
-              if (fromCrop.passport_series) parsed.passport_series = fromCrop.passport_series;
-              if (fromCrop.passport_number) parsed.passport_number = fromCrop.passport_number;
-            } catch {
-              // область серия/номер не распознана
-            }
-          }
-          await worker.terminate();
-          setSpreadData(parsed);
-          clearImage();
-          setPhase("registration");
-          setFile(null);
-        } else {
-          await worker.terminate();
-          parsed = parseRegistrationOcr(data.text);
-          clearImage();
-          onRecognized({ ...spreadData, ...parsed });
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Ошибка распознавания");
-      } finally {
-        setLoading(false);
-        setProgress(0);
-      }
-    },
-    [clearImage, onRecognized, spreadData]
-  );
-
-  /** Tesseract только по прописке (fallback, когда Beorg не настроен или не справился). */
-  const runOcrRegistrationOnly = useCallback(
-    async (registrationFile: File) => {
-      setError(null);
-      setLoading(true);
-      setProgress(0);
-      try {
-        const blob = await preprocessForOcr(registrationFile);
-        const { createWorker } = await import("tesseract.js");
-        const worker = await createWorker(["rus", "eng"], 1, {
-          logger: (m) => {
-            if (m.status === "recognizing text" && typeof m.progress === "number") {
-              setProgress(Math.round(m.progress * 100));
-            }
-          },
-        });
-        const { data } = await worker.recognize(blob);
-        await worker.terminate();
-        const parsed = parseRegistrationOcr(data.text);
-        clearImage();
-        setSpreadFile(null);
-        onRecognized({ ...spreadData, ...parsed });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Ошибка распознавания прописки");
-      } finally {
-        setLoading(false);
-        setProgress(0);
-      }
-    },
-    [clearImage, onRecognized, spreadData]
-  );
-
   const handleRecognize = async () => {
     if (!file) {
       setError(phase === "spread" ? "Сначала выберите или сделайте фото разворота" : "Сначала выберите фото страницы с пропиской");
@@ -159,68 +58,28 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     setProgress(0);
     try {
       if (phase === "spread") {
-        try {
-          const result = await recognizePassport(file);
-          if (result && (result.patient_fio || result.passport_series || result.passport_number)) {
-            setSpreadData(result);
-            setSpreadFile(file);
-            clearImage();
-            setPhase("registration");
-            setFile(null);
-            setLoading(false);
-            setProgress(0);
-            return;
-          }
-        } catch (apiErr) {
-          const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-          const useFallback =
-            msg.includes("не настроен") ||
-            msg.includes("503") ||
-            /fetch|network|failed to fetch|load failed/i.test(msg);
-          if (useFallback) {
-            setBeorgConfigured(false);
-          } else {
-            setError(msg);
-            setLoading(false);
-            return;
-          }
+        const result = await recognizePassport(file);
+        if (result && (result.patient_fio || result.passport_series || result.passport_number)) {
+          setSpreadData(result);
+          setSpreadFile(file);
+          clearImage();
+          setPhase("registration");
+          setFile(null);
         }
-        await runOcr(file, true);
         return;
       }
       if (phase === "registration" && spreadFile) {
-        try {
-          const result = await recognizePassport(spreadFile, file);
-          if (result && (result.patient_fio || result.passport_series || result.reg_address)) {
-            clearImage();
-            setSpreadFile(null);
-            onRecognized(result);
-            setLoading(false);
-            return;
-          }
-        } catch (apiErr) {
-          const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-          const useFallback =
-            msg.includes("не настроен") ||
-            msg.includes("503") ||
-            /fetch|network|failed to fetch|load failed/i.test(msg);
-          if (useFallback) {
-            setBeorgConfigured(false);
-          } else {
-            setError(msg);
-            setLoading(false);
-            return;
-          }
+        const result = await recognizePassport(spreadFile, file);
+        if (result && (result.patient_fio || result.passport_series || result.reg_address)) {
+          clearImage();
+          setSpreadFile(null);
+          onRecognized(result);
         }
-        await runOcrRegistrationOnly(file);
         return;
       }
-      // Прописка без spreadFile (разворот был через Tesseract) — один вызов runOcr по второму фото
-      if (phase === "registration") {
-        await runOcrRegistrationOnly(file);
-        return;
-      }
-      await runOcr(file, true);
+    } catch (apiErr) {
+      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      setError(msg);
     } finally {
       setLoading(false);
       setProgress(0);
@@ -245,12 +104,6 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-neutral-900">Сканирование паспорта</h2>
-        {beorgConfigured === true && (
-          <p className="mt-1 text-sm text-green-700">Режим: Биорг (облако)</p>
-        )}
-        {beorgConfigured === false && (
-          <p className="mt-1 text-sm text-amber-700">Режим: локальное распознавание (Биорг недоступен — проверьте переменные BEORG_* на бэкенде)</p>
-        )}
         <p className="mt-1 text-neutral-500">
           {phase === "spread"
             ? "Шаг 1: сфотографируйте разворот с фото (страницы 2–3). Разместите паспорт в кадре, избегайте бликов."
@@ -281,7 +134,7 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
             onChange={handleFile}
             disabled={loading}
           />
-          {phase === "spread" ? "Фото разворота (камера или галерея)" : "Фото прописки (камера или галерея)"}
+          {phase === "spread" ? "Фото разворота" : "Фото прописки"}
         </label>
         <button
           type="button"

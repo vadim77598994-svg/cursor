@@ -61,13 +61,6 @@ export type GenerateContractResult = {
   message?: string;
 };
 
-/** Проверка: настроен ли на бэкенде сервис Beorg (без раскрытия секретов). */
-export async function getPassportStatus(): Promise<{ beorg_configured: boolean }> {
-  const res = await fetch(`${API_BASE}/api/v1/passport/status`);
-  if (!res.ok) return { beorg_configured: false };
-  return res.json();
-}
-
 const RECOGNIZE_PASSPORT_TIMEOUT_MS = 90_000;
 
 /** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются на сервере. Может занять до ~60 с. */
