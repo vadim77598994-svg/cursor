@@ -48,9 +48,9 @@ export default function DogovorPage() {
         <Image
           src="/logo.png"
           alt="P.Y.E"
-          width={96}
-          height={32}
-          className="h-8 w-auto shrink-0 object-contain"
+          width={192}
+          height={64}
+          className="h-16 w-auto shrink-0 object-contain"
           priority
         />
       </div>
