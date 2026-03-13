@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     beorg_project_id: str = ""
     beorg_token: str = ""
     beorg_machine_uid: str = ""
+    # Предобработка фото перед Биорг (ресайз, контраст, резкость). true = включено (по умолчанию для теста).
+    preprocess_passport_image: bool = True
 
     class Config:
         env_file = ".env"

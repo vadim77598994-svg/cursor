@@ -67,6 +67,19 @@ async def passport_recognize(
     if image_registration and image_registration.filename:
         if image_registration.content_type and image_registration.content_type.startswith("image/"):
             reg_bytes = _read_upload_in_memory(image_registration)
+
+    if settings.preprocess_passport_image:
+        from app.services.image_enhance import enhance_for_ocr
+        enhanced_spread = enhance_for_ocr(spread_bytes)
+        if enhanced_spread is not None:
+            spread_bytes = enhanced_spread
+            logger.debug("Spread image preprocessed before Beorg")
+        if reg_bytes:
+            enhanced_reg = enhance_for_ocr(reg_bytes)
+            if enhanced_reg is not None:
+                reg_bytes = enhanced_reg
+                logger.debug("Registration image preprocessed before Beorg")
+
     result = recognize_passport(
         settings.beorg_project_id,
         settings.beorg_token,
