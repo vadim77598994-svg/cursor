@@ -88,8 +88,10 @@ async def passport_recognize(
         reg_bytes,
     )
     if not result:
+        logger.warning("Passport recognize: Beorg returned no data (check Beorg logs for broken_reasons_ru)")
         raise HTTPException(
             status_code=422,
             detail="Не удалось распознать паспорт. Проверьте качество фото и повторите или введите данные вручную.",
         )
+    logger.info("Passport recognize: success, fields extracted")
     return result

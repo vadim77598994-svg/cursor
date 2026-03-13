@@ -47,8 +47,9 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
         body = r.json()
     document_id = body.get("document_id")
     if not document_id:
-        logger.warning("Beorg add_document: no document_id in response")
+        logger.warning("Beorg add_document: no document_id in response, body keys=%s", list(body.keys()))
         return None
+    logger.info("Beorg add_document: document_id=%s, polling for result", document_id)
     time.sleep(POLL_INITIAL_DELAY)
     deadline = time.monotonic() + POLL_MAX_WAIT
     while time.monotonic() < deadline:
@@ -60,17 +61,63 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
                 continue
             r.raise_for_status()
             result = r.json()
+        logger.info(
+            "Beorg result: document_id=%s, keys=%s, broken=%s, documents_count=%s",
+            document_id,
+            list(result.keys()),
+            result.get("broken"),
+            len(result.get("documents") or []),
+        )
         docs = result.get("documents") or []
+        # Данные могут быть в documents[].data, в result.data или в полях самого doc при broken
+        data = None
         for doc in docs:
-            data = doc.get("data")
-            if data and isinstance(data, dict):
-                return data
+            candidate = doc.get("data")
+            if candidate and isinstance(candidate, dict):
+                data = candidate
+                break
+        if not data and isinstance(result.get("data"), dict):
+            data = result.get("data")
+        if not data and docs and isinstance(docs[0], dict):
+            data = _extract_data_from_doc(docs[0])
+        if data:
+            if result.get("broken") is True:
+                broken_reasons = result.get("broken_reasons_ru") or result.get("broken_reasons") or []
+                logger.info(
+                    "Beorg result: document marked broken (%s), returning extracted fields anyway",
+                    broken_reasons,
+                )
+            return data
         if result.get("broken") is True:
-            logger.warning("Beorg result: document marked broken")
+            broken_reasons = result.get("broken_reasons_ru") or result.get("broken_reasons") or []
+            logger.warning(
+                "Beorg result: document marked broken, no extracted data. broken_reasons_ru=%s, result_keys=%s",
+                broken_reasons,
+                list(result.keys()),
+            )
+            if docs:
+                logger.info("First document keys: %s", list(docs[0].keys()) if docs[0] else [])
             return None
         time.sleep(POLL_INTERVAL)
     logger.warning("Beorg result: timeout waiting for result")
     return None
+
+
+# Поля, которые Beorg может вернуть на верхнем уровне документа (при broken и т.п.)
+BEORG_DATA_KEYS = (
+    "LastName", "FirstName", "MiddleName", "IssuedBy", "IssuingAuthority", "IssueAuthority",
+    "IssueDate", "Series", "Number", "BirthDate", "Address",
+)
+
+
+def _extract_data_from_doc(doc: dict[str, Any]) -> dict[str, Any] | None:
+    """Если data пустой, пробуем собрать данные из полей самого doc (формат при broken)."""
+    out = {}
+    for key in BEORG_DATA_KEYS:
+        val = doc.get(key)
+        if val is not None and str(val).strip():
+            out[key] = val
+    return out if out else None
 
 
 def _map_beorg_to_patient(data: dict[str, Any]) -> dict[str, str]:
