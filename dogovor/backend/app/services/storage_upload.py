@@ -26,3 +26,16 @@ def upload_contract_pdf(contract_number: str, pdf_bytes: bytes) -> str | None:
     except Exception as e:
         logger.exception("Storage upload failed for %s: %s", path, e)
         return None
+
+
+def download_contract_pdf(pdf_path: str) -> bytes | None:
+    """Скачивает PDF из Supabase Storage по пути. Возвращает bytes или None."""
+    if not pdf_path or not pdf_path.strip():
+        return None
+    bucket = settings.storage_bucket
+    try:
+        data = supabase.storage.from_(bucket).download(pdf_path)
+        return data if isinstance(data, bytes) else None
+    except Exception as e:
+        logger.exception("Storage download failed for %s: %s", pdf_path, e)
+        return None

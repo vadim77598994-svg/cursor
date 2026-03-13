@@ -136,3 +136,13 @@ export async function generateContract(
     clearTimeout(timeoutId);
   }
 }
+
+/** Скачать PDF договора по id (для шаринга). */
+export async function fetchContractPdf(contractId: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/v1/contracts/${contractId}/pdf`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось загрузить PDF договора");
+  }
+  return res.blob();
+}

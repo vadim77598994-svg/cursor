@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
-import { generateContract, previewContract } from "@/lib/api";
+import { fetchContractPdf, generateContract, previewContract } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -141,73 +141,76 @@ export function StepSignature({
     setError(null);
   };
 
-  const doGenerate = useCallback(async (): Promise<GenerateContractResult | null> => {
-    if (!hasStroke()) {
-      setError("Поставьте подпись в поле выше");
-      return null;
-    }
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      const result = await generateContract({
-        location_id: location.id,
-        staff_id: staff.id,
-        patient,
-        signature_data_url: getSignatureDataUrl() ?? undefined,
-      });
-      setDone(result.contract_number);
-      setContractId(result.contract_id ?? null);
-      setPdfPath(result.pdf_path ?? null);
-      setEmailSent(result.email_sent ?? false);
-      setEmailFailReason(result.email_fail_reason ?? null);
-      return result;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка при создании договора");
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [location.id, staff.id, patient, getSignatureDataUrl, hasStroke]);
+  const doGenerate = useCallback(
+    async (opts?: { sendEmail?: boolean }): Promise<GenerateContractResult | null> => {
+      if (!hasStroke()) {
+        setError("Поставьте подпись в поле выше");
+        return null;
+      }
+      const sendEmail = opts?.sendEmail !== false;
+      setError(null);
+      setIsSubmitting(true);
+      try {
+        const result = await generateContract({
+          location_id: location.id,
+          staff_id: staff.id,
+          patient: sendEmail ? patient : { ...patient, patient_email: undefined },
+          signature_data_url: getSignatureDataUrl() ?? undefined,
+        });
+        setDone(result.contract_number);
+        setContractId(result.contract_id ?? null);
+        setPdfPath(result.pdf_path ?? null);
+        setEmailSent(result.email_sent ?? false);
+        setEmailFailReason(result.email_fail_reason ?? null);
+        return result;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка при создании договора");
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [location.id, staff.id, patient, getSignatureDataUrl, hasStroke]
+  );
 
-  const handleSubmit = () => doGenerate();
+  const handleSubmit = () => doGenerate({ sendEmail: true });
 
   const handleShareClick = async () => {
-    const result = await doGenerate();
-    if (!result || !canShare) return;
-    const title = `Договор № ${result.contract_number}`;
-    const text = `Договор об оказании платных медицинских услуг № ${result.contract_number} оформлен.`;
+    const result = await doGenerate({ sendEmail: false });
+    if (!result?.contract_id || !canShare) return;
     try {
-      await navigator.share({ title, text, url: window.location.href });
+      const blob = await fetchContractPdf(result.contract_id);
+      const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
+        type: "application/pdf",
+      });
+      await navigator.share({
+        title: `Договор № ${result.contract_number}`,
+        files: [file],
+      });
     } catch (err) {
-      if ((err as Error).name !== "AbortError") setError("Не удалось открыть меню «Поделиться»");
+      if ((err as Error).name !== "AbortError") {
+        setError((err as Error).message || "Не удалось загрузить или отправить PDF");
+      }
     }
   };
 
   const handleShare = useCallback(async () => {
-    const title = `Договор № ${done}`;
-    const text = `Договор об оказании платных медицинских услуг № ${done} оформлен.`;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text,
-          url: window.location.href,
-        });
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          const mailto = patient.patient_email
-            ? `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n" + window.location.href)}`
-            : `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
-          window.open(mailto);
-        }
-      }
-    } else {
+    if (!contractId || !done) return;
+    if (!canShare) {
       const mailto = patient.patient_email
-        ? `mailto:${patient.patient_email}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`
-        : `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
+        ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent("Договор оформлен. PDF приложен к письму с сервера.")}`
+        : `mailto:?subject=${encodeURIComponent("Договор № " + done)}`;
       window.open(mailto);
+      return;
     }
-  }, [done, patient.patient_email]);
+    try {
+      const blob = await fetchContractPdf(contractId);
+      const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
+      await navigator.share({ title: `Договор № ${done}`, files: [file] });
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
+    }
+  }, [contractId, done, canShare, patient.patient_email]);
 
   if (done) {
     return (
@@ -235,7 +238,7 @@ export function StepSignature({
             onClick={handleShare}
             className="min-h-touch rounded-lg border border-neutral-300 bg-white px-6 py-3 font-medium text-neutral-800 hover:bg-neutral-50"
           >
-            {canShare ? "Поделиться (почта, мессенджеры…)" : "Отправить по email"}
+            {canShare ? "Поделиться PDF" : "Отправить по email"}
           </button>
           <button
             type="button"
@@ -355,7 +358,7 @@ export function StepSignature({
             disabled={isSubmitting}
             className="min-h-touch order-4 w-full rounded-lg border border-neutral-300 bg-white px-6 py-3 font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50 sm:order-4"
           >
-            Поделиться (почта, мессенджеры…)
+            Подписать и поделиться
           </button>
         )}
       </div>

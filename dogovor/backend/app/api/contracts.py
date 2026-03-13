@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 
 from app.db import supabase
 from app.models.contracts import GenerateContractRequest
@@ -9,7 +10,7 @@ from app.services.contract_number import get_next_contract_number
 from app.services.email_send import send_contract_pdf
 from app.services.pdf_render import render_contract_html, render_contract_pdf
 from app.services.signature_resize import fetch_and_resize_signature
-from app.services.storage_upload import upload_contract_pdf
+from app.services.storage_upload import download_contract_pdf, upload_contract_pdf
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -68,6 +69,43 @@ def preview_contract(body: GenerateContractRequest):
         raise
     except Exception as e:
         logger.exception("preview_contract failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/contracts/{contract_id}/pdf")
+def get_contract_pdf(contract_id: str):
+    """
+    Возвращает подписанный PDF договора по id (для шаринга: «Подписать и поделиться»).
+    """
+    try:
+        row = (
+            supabase.table("dogovor_contracts")
+            .select("pdf_path, contract_number")
+            .eq("id", contract_id)
+            .single()
+            .execute()
+        )
+        if not row.data:
+            raise HTTPException(status_code=404, detail="Contract not found")
+        pdf_path = (row.data or {}).get("pdf_path")
+        contract_number = (row.data or {}).get("contract_number") or "contract"
+        if not pdf_path:
+            raise HTTPException(status_code=404, detail="PDF not found for this contract")
+        pdf_bytes = download_contract_pdf(pdf_path)
+        if not pdf_bytes:
+            raise HTTPException(status_code=404, detail="PDF file not available")
+        filename = f"dogovor_{contract_number.replace('/', '-')}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("get_contract_pdf failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
