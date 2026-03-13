@@ -87,10 +87,15 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   };
 
   const handleManual = () => {
+    if (phase === "registration" && spreadData) {
+      onRecognized(spreadData);
+    } else {
+      onManual();
+    }
     clearImage();
     setSpreadData(null);
+    setSpreadFile(null);
     setPhase("spread");
-    onManual();
   };
 
   const handleBackToSpread = () => {
