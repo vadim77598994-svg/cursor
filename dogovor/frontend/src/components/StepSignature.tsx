@@ -24,8 +24,13 @@ export function StepSignature({
   const [contractToggleOpen, setContractToggleOpen] = useState(false);
   const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
+  const [canShare, setCanShare] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -168,7 +173,7 @@ export function StepSignature({
 
   const handleShareClick = async () => {
     const result = await doGenerate();
-    if (!result || typeof navigator === "undefined" || !navigator.share) return;
+    if (!result || !canShare) return;
     const title = `Договор № ${result.contract_number}`;
     const text = `Договор об оказании платных медицинских услуг № ${result.contract_number} оформлен.`;
     try {
@@ -205,7 +210,6 @@ export function StepSignature({
   }, [done, patient.patient_email]);
 
   if (done) {
-    const canShare = typeof navigator !== "undefined" && navigator.share;
     return (
       <div className="rounded-xl border-2 border-green-200 bg-green-50 p-8 text-center">
         <p className="text-xl font-semibold text-green-800">Договор оформлен</p>
@@ -344,7 +348,7 @@ export function StepSignature({
         >
           {isSubmitting ? "Формируем договор…" : "Подписать и отправить"}
         </button>
-        {typeof navigator !== "undefined" && navigator.share && (
+        {canShare && (
           <button
             type="button"
             onClick={handleShareClick}
