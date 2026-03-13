@@ -83,6 +83,26 @@ def _make_link_callback(base_path: Path):
     return link_callback
 
 
+def render_contract_html(context: dict) -> str | None:
+    """Рендер шаблона договора в HTML (без конвертации в PDF). Для превью без подписей."""
+    try:
+        if not TEMPLATES_DIR.exists():
+            logger.error("Templates dir not found: %s", TEMPLATES_DIR)
+            return None
+        font_path = FONTS_DIR / FONT_FILE_NAME
+        ctx = dict(context)
+        ctx["font_available"] = font_path.exists()
+        env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
+            autoescape=jinja2.select_autoescape(["html", "xml"]),
+        )
+        template = env.get_template("contract.html")
+        return template.render(**ctx)
+    except Exception as e:
+        logger.exception("Contract HTML render failed: %s", e)
+        return None
+
+
 def render_contract_pdf(context: dict) -> bytes | None:
     """Рендер HTML из Jinja2-шаблона и конвертация в PDF. Возвращает bytes или None при ошибке/отсутствии xhtml2pdf."""
     if not _HAS_XHTML2PDF:

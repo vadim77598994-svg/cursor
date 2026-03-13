@@ -94,6 +94,20 @@ export async function recognizePassport(
   return res.json();
 }
 
+/** Превью договора (HTML без подписей) для ознакомления на шаге 4. */
+export async function previewContract(payload: Omit<GenerateContractPayload, "signature_data_url">): Promise<{ html: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/contracts/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось загрузить превью договора");
+  }
+  return res.json();
+}
+
 const GENERATE_CONTRACT_TIMEOUT_MS = 120_000;
 
 export async function generateContract(

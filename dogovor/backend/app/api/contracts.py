@@ -7,12 +7,68 @@ from app.db import supabase
 from app.models.contracts import GenerateContractRequest
 from app.services.contract_number import get_next_contract_number
 from app.services.email_send import send_contract_pdf
-from app.services.pdf_render import render_contract_pdf
+from app.services.pdf_render import render_contract_html, render_contract_pdf
 from app.services.signature_resize import fetch_and_resize_signature
 from app.services.storage_upload import upload_contract_pdf
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.post("/contracts/preview")
+def preview_contract(body: GenerateContractRequest):
+    """
+    Возвращает HTML договора со всеми приложениями без подписей (для ознакомления на шаге 4).
+    """
+    try:
+        loc = (
+            supabase.table("dogovor_locations")
+            .select("contract_prefix, address, city")
+            .eq("id", body.location_id)
+            .single()
+            .execute()
+        )
+        if not loc.data:
+            raise HTTPException(status_code=404, detail="Location not found")
+        cabinet_address = loc.data["address"]
+        city = loc.data["city"]
+
+        staff_row = (
+            supabase.table("dogovor_staff")
+            .select("fio")
+            .eq("id", body.staff_id)
+            .single()
+            .execute()
+        )
+        staff_fio = staff_row.data["fio"] if staff_row.data else ""
+
+        current_date = datetime.now().strftime("%d.%m.%Y")
+        context = {
+            "contract_number": "—",
+            "current_date": current_date,
+            "city": city,
+            "cabinet_address": cabinet_address,
+            "staff_fio": staff_fio,
+            "staff_signature_url": "",
+            "staff_signature_data_url": None,
+            "patient_fio": _safe(body.patient.patient_fio),
+            "patient_birth_date": _safe(body.patient.patient_birth_date),
+            "passport_series": _safe(body.patient.passport_series),
+            "passport_number": _safe(body.patient.passport_number),
+            "passport_issued_by": _safe(body.patient.passport_issued_by),
+            "passport_date": _safe(body.patient.passport_date),
+            "reg_address": _safe(body.patient.reg_address),
+            "patient_signature_data_url": None,
+        }
+        html = render_contract_html(context)
+        if not html:
+            raise HTTPException(status_code=500, detail="Failed to render contract preview")
+        return {"html": html}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("preview_contract failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _safe(s: str | None) -> str:
@@ -49,7 +105,7 @@ def generate_contract(body: GenerateContractRequest):
         staff_signature_url = (staff_row.data or {}).get("signature_image_url") or ""
         staff_signature_data_url = None
         if staff_signature_url:
-            staff_signature_data_url = fetch_and_resize_signature(staff_signature_url, max_height_px=42)
+            staff_signature_data_url = fetch_and_resize_signature(staff_signature_url)
 
         contract_number = get_next_contract_number(prefix)
         logger.info("Contract number allocated: %s", contract_number)

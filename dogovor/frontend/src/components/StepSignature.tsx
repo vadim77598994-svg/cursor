@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import type { Location, Staff, PatientData } from "@/lib/api";
-import { generateContract } from "@/lib/api";
+import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
+import { generateContract, previewContract } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -22,6 +22,8 @@ export function StepSignature({
   onReset,
 }: StepSignatureProps) {
   const [contractToggleOpen, setContractToggleOpen] = useState(false);
+  const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
+  const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -134,10 +136,10 @@ export function StepSignature({
     setError(null);
   };
 
-  const handleSubmit = async () => {
+  const doGenerate = useCallback(async (): Promise<GenerateContractResult | null> => {
     if (!hasStroke()) {
       setError("Поставьте подпись в поле выше");
-      return;
+      return null;
     }
     setError(null);
     setIsSubmitting(true);
@@ -153,10 +155,26 @@ export function StepSignature({
       setPdfPath(result.pdf_path ?? null);
       setEmailSent(result.email_sent ?? false);
       setEmailFailReason(result.email_fail_reason ?? null);
+      return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка при создании договора");
+      return null;
     } finally {
       setIsSubmitting(false);
+    }
+  }, [location.id, staff.id, patient, getSignatureDataUrl, hasStroke]);
+
+  const handleSubmit = () => doGenerate();
+
+  const handleShareClick = async () => {
+    const result = await doGenerate();
+    if (!result || typeof navigator === "undefined" || !navigator.share) return;
+    const title = `Договор № ${result.contract_number}`;
+    const text = `Договор об оказании платных медицинских услуг № ${result.contract_number} оформлен.`;
+    try {
+      await navigator.share({ title, text, url: window.location.href });
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setError("Не удалось открыть меню «Поделиться»");
     }
   };
 
@@ -231,39 +249,48 @@ export function StepSignature({
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-neutral-900">Подпись клиента</h2>
-        <p className="mt-1 text-neutral-500">Укажите email для отправки договора, при желании ознакомьтесь с условиями и поставьте подпись</p>
+        <p className="mt-1 text-neutral-500">При желании ознакомьтесь с договором и поставьте подпись</p>
       </div>
-
-      {onPatientChange && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Email для отправки договора</label>
-          <input
-            type="email"
-            value={patient.patient_email ?? ""}
-            onChange={(e) => onPatientChange({ ...patient, patient_email: e.target.value || undefined })}
-            placeholder="client@example.com"
-            className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-base focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
-          />
-        </div>
-      )}
 
       <div className="rounded-lg border border-neutral-200 bg-white">
         <button
           type="button"
-          onClick={() => setContractToggleOpen((o) => !o)}
+          onClick={async () => {
+            const next = !contractToggleOpen;
+            setContractToggleOpen(next);
+            if (next && !contractPreviewHtml && !contractPreviewLoading) {
+              setContractPreviewLoading(true);
+              try {
+                const { html } = await previewContract({
+                  location_id: location.id,
+                  staff_id: staff.id,
+                  patient,
+                });
+                setContractPreviewHtml(html);
+              } catch {
+                setContractPreviewHtml("<p>Не удалось загрузить текст договора.</p>");
+              } finally {
+                setContractPreviewLoading(false);
+              }
+            }
+          }}
           className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-50"
         >
           <span>Ознакомиться с договором</span>
           <span className="text-neutral-400" aria-hidden>{contractToggleOpen ? "▼" : "▶"}</span>
         </button>
         {contractToggleOpen && (
-          <div className="border-t border-neutral-200 px-4 py-3 text-sm text-neutral-600">
-            <p className="mb-2 font-medium text-neutral-800">Договор об оказании платных медицинских услуг</p>
-            <p><strong>Пациент:</strong> {patient.patient_fio || "—"}</p>
-            <p><strong>Исполнитель:</strong> ООО «ПАЙ ОПТИКС», оптометрист {staff.fio}</p>
-            <p><strong>Место оказания услуг:</strong> {location.address}</p>
-            <p><strong>Услуга:</strong> Подбор очковой коррекции зрения. Стоимость 1600 руб.</p>
-            <p className="mt-2 text-neutral-500">Полный текст договора будет сформирован после подписания и отправлен на указанный email.</p>
+          <div className="max-h-[60vh] overflow-auto border-t border-neutral-200">
+            {contractPreviewLoading ? (
+              <p className="p-4 text-sm text-neutral-500">Загрузка…</p>
+            ) : contractPreviewHtml ? (
+              <iframe
+                title="Текст договора"
+                srcDoc={contractPreviewHtml}
+                className="h-[55vh] w-full border-0 bg-white p-4 text-left text-sm"
+                sandbox="allow-same-origin"
+              />
+            ) : null}
           </div>
         )}
       </div>
@@ -288,23 +315,45 @@ export function StepSignature({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <button
           type="button"
           onClick={clearCanvas}
           disabled={isSubmitting}
-          className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+          className="min-h-touch order-1 rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 sm:order-1"
         >
           Очистить
         </button>
+        {onPatientChange && (
+          <div className="order-2 min-w-0 flex-1 sm:order-2">
+            <label className="mb-1 block text-sm font-medium text-neutral-700">Email для отправки договора</label>
+            <input
+              type="email"
+              value={patient.patient_email ?? ""}
+              onChange={(e) => onPatientChange({ ...patient, patient_email: e.target.value || undefined })}
+              placeholder="client@example.com"
+              className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-base focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
+            />
+          </div>
+        )}
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="min-h-touch flex-1 rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
+          className="min-h-touch order-3 w-full rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50 sm:order-3 sm:flex-1"
         >
           {isSubmitting ? "Формируем договор…" : "Подписать и отправить"}
         </button>
+        {typeof navigator !== "undefined" && navigator.share && (
+          <button
+            type="button"
+            onClick={handleShareClick}
+            disabled={isSubmitting}
+            className="min-h-touch order-4 w-full rounded-lg border border-neutral-300 bg-white px-6 py-3 font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50 sm:order-4"
+          >
+            Поделиться (почта, мессенджеры…)
+          </button>
+        )}
       </div>
       {isSubmitting && (
         <p className="text-center text-sm text-neutral-500">Подождите, формируем PDF (до 2 мин)…</p>
