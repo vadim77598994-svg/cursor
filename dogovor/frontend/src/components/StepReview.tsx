@@ -16,7 +16,6 @@ const fields: { key: keyof PatientData; label: string; placeholder: string; type
   { key: "passport_issued_by", label: "Кем выдан", placeholder: "ОВД района..." },
   { key: "passport_date", label: "Дата выдачи", placeholder: "ДД.ММ.ГГГГ" },
   { key: "reg_address", label: "Адрес регистрации", placeholder: "г. Москва, ул. ..." },
-  { key: "patient_email", label: "Email для отправки договора", placeholder: "client@example.com", type: "email" },
 ];
 
 export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
@@ -54,7 +53,7 @@ export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
         disabled={!canNext}
         className="min-h-touch w-full rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Далее — подпись
+        Сгенерировать договор
       </button>
     </div>
   );

@@ -118,6 +118,7 @@ export default function DogovorPage() {
           location={location}
           staff={staff}
           patient={patient}
+          onPatientChange={setPatient}
           onSuccess={() => {}}
           onReset={resetFlow}
         />
