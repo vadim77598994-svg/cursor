@@ -19,7 +19,7 @@ BEORG_RESULT_URL = "https://api.beorg.ru/api/document/result"
 # Beorg возвращает 425 Too Early, пока документ обрабатывается — ждём перед первым опросом и при 425 повторяем
 POLL_INITIAL_DELAY = 4.0
 POLL_INTERVAL = 3.0
-POLL_MAX_WAIT = 60.0
+POLL_MAX_WAIT = 120.0  # до 2 мин: при «некачественном» изображении Beorg может обрабатывать дольше
 
 
 def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_b64: list[str]) -> dict[str, Any] | None:
@@ -49,14 +49,17 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
     if not document_id:
         logger.warning("Beorg add_document: no document_id in response, body keys=%s", list(body.keys()))
         return None
-    logger.info("Beorg add_document: document_id=%s, polling for result", document_id)
+    logger.info("Beorg add_document: document_id=%s, polling for result (max %s s)", document_id, int(POLL_MAX_WAIT))
     time.sleep(POLL_INITIAL_DELAY)
     deadline = time.monotonic() + POLL_MAX_WAIT
+    poll_425_count = 0
     while time.monotonic() < deadline:
         with httpx.Client(timeout=15.0) as client:
             r = client.get(f"{BEORG_RESULT_URL}/{document_id}", params={"token": token})
             if r.status_code == 425:
-                logger.debug("Beorg 425 Too Early, retrying in %s s", POLL_INTERVAL)
+                poll_425_count += 1
+                if poll_425_count <= 3 or poll_425_count % 5 == 0:
+                    logger.info("Beorg 425 Too Early (#%s), retry in %s s", poll_425_count, POLL_INTERVAL)
                 time.sleep(POLL_INTERVAL)
                 continue
             r.raise_for_status()
@@ -99,7 +102,11 @@ def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_
                 logger.info("First document keys: %s", list(docs[0].keys()) if docs[0] else [])
             return None
         time.sleep(POLL_INTERVAL)
-    logger.warning("Beorg result: timeout waiting for result")
+    logger.warning(
+        "Beorg result: timeout waiting for result (got %s x 425, waited %s s)",
+        poll_425_count,
+        int(POLL_MAX_WAIT),
+    )
     return None
 
 
