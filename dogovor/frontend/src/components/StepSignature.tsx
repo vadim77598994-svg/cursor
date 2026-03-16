@@ -32,15 +32,21 @@ export function StepSignature({
     setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
   }, []);
 
+  // Внутреннее разрешение канваса в 2× от отображаемого — подпись в PDF без пикселизации
+  const CANVAS_SCALE = 2;
+  const CANVAS_LOGICAL_W = 600;
+  const CANVAS_LOGICAL_H = 220;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.strokeStyle = "#1f2937";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * CANVAS_SCALE;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    ctx.imageSmoothingEnabled = true;
   }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -307,8 +313,8 @@ export function StepSignature({
         <div className="rounded-lg border border-neutral-200 bg-white p-2">
         <canvas
           ref={canvasRef}
-          width={600}
-          height={220}
+          width={CANVAS_LOGICAL_W * CANVAS_SCALE}
+          height={CANVAS_LOGICAL_H * CANVAS_SCALE}
           className="block w-full touch-none rounded-lg border border-neutral-200"
           style={{ maxWidth: "100%", height: "auto", minHeight: 180 }}
           onMouseDown={startDrawing}
