@@ -4,8 +4,8 @@
 Использование:
   Из корня backend: .venv/bin/python -m app.services.signature_upload [папка_с_подписями]
 
-  Файлы в папке должны называться по фамилии: Карташева.png, Величко.png, Еремина.png,
-  Ефремова.png, Ивченко.png, Никитина.png
+  Файлы в папке — по фамилии: Карташева.png, Величко.png, Еремина.png, Ефремова.png,
+  Ивченко.png, Никитина.png, Коваленко.png, Карасева.png (допускается ё: Карасёва.png, Карташёва.png).
 """
 import os
 import sys
@@ -19,6 +19,8 @@ STAFF_SURNAMES = [
     "Ефремова",
     "Ивченко",
     "Никитина",
+    "Коваленко",
+    "Карасева",
 ]
 # Имена файлов в Storage — только ASCII (Supabase не принимает кириллицу в ключах)
 STAFF_STORAGE_NAMES = [
@@ -28,7 +30,11 @@ STAFF_STORAGE_NAMES = [
     "Efremova",
     "Ivchenko",
     "Nikitina",
+    "Kovalenko",
+    "Karaseva",
 ]
+# Вариант написания фамилии в имени файла (е/ё): если файл Карасёва.png, а в БД Карасева
+STAFF_FILE_ALT = {"Карасева": "Карасёва", "Карташева": "Карташёва"}
 
 
 def get_public_url(supabase_client, bucket: str, path: str) -> str:
@@ -57,8 +63,13 @@ def upload_signatures(signatures_dir: str) -> None:
     for surname, storage_name in zip(STAFF_SURNAMES, STAFF_STORAGE_NAMES):
         fname = f"{surname}.png"
         local = path / fname
+        if not local.exists() and surname in STAFF_FILE_ALT:
+            alt_fname = f"{STAFF_FILE_ALT[surname]}.png"
+            alt_local = path / alt_fname
+            if alt_local.exists():
+                fname, local = alt_fname, alt_local
         if not local.exists():
-            print(f"Пропуск: файл не найден {local}")
+            print(f"Пропуск: файл не найден {path / fname}")
             continue
         storage_path = f"signatures/{storage_name}.png"
         try:
