@@ -95,8 +95,10 @@ export default function DogovorPage() {
         />
       )}
 
-      {step === 1 && (
+      {step === 1 && location && staff && (
         <StepScan
+          location={location}
+          staff={staff}
           onRecognized={(parsed) => {
             setPatient((prev) => ({ ...prev, ...parsed }));
             setStep(2);

@@ -1,22 +1,34 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import type { PatientData } from "@/lib/api";
-import { recognizePassport } from "@/lib/api";
+import { useRef, useState, useCallback, useEffect } from "react";
+import type { Location, Staff, PatientData } from "@/lib/api";
+import { recognizePassport, previewContract } from "@/lib/api";
 
 const IMAGE_CLEAR_MS = 30_000;
 
 type Phase = "spread" | "registration";
 
+const emptyPatientForPreview: PatientData = {
+  patient_fio: "",
+  patient_birth_date: "",
+  passport_series: "",
+  passport_number: "",
+  passport_issued_by: "",
+  passport_date: "",
+  reg_address: "",
+  patient_email: "",
+};
+
 type StepScanProps = {
+  location: Location;
+  staff: Staff;
   onRecognized: (data: Partial<PatientData>) => void;
   onManual: () => void;
 };
 
-export function StepScan({ onRecognized, onManual }: StepScanProps) {
+export function StepScan({ location, staff, onRecognized, onManual }: StepScanProps) {
   const [phase, setPhase] = useState<Phase>("spread");
   const [spreadData, setSpreadData] = useState<Partial<PatientData> | null>(null);
-  /** Файл разворота храним для второго шага, чтобы отправить оба снимка в Beorg */
   const [spreadFile, setSpreadFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -24,6 +36,9 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [contractToggleOpen, setContractToggleOpen] = useState(false);
+  const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
+  const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
 
   const clearImage = useCallback(() => {
     if (clearTimerRef.current) {
@@ -104,6 +119,19 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
     setPhase("spread");
     setError(null);
   };
+
+  useEffect(() => {
+    if (!contractToggleOpen || contractPreviewHtml !== null) return;
+    setContractPreviewLoading(true);
+    previewContract({
+      location_id: location.id,
+      staff_id: staff.id,
+      patient: emptyPatientForPreview,
+    })
+      .then(({ html }) => setContractPreviewHtml(html))
+      .catch(() => setContractPreviewHtml("<p>Не удалось загрузить текст договора.</p>"))
+      .finally(() => setContractPreviewLoading(false));
+  }, [contractToggleOpen, contractPreviewHtml, location.id, staff.id]);
 
   return (
     <div className="space-y-6">
@@ -188,6 +216,33 @@ export function StepScan({ onRecognized, onManual }: StepScanProps) {
       {error && (
         <div className="rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
       )}
+
+      <div className="mt-8 border-t border-neutral-200 pt-6">
+        <button
+          type="button"
+          onClick={() => setContractToggleOpen((o) => !o)}
+          className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-3 text-left font-medium text-neutral-900 hover:bg-neutral-100"
+        >
+          <span>Ознакомиться с текстом договора</span>
+          <span className="text-neutral-500" aria-hidden>
+            {contractToggleOpen ? "▼" : "▶"}
+          </span>
+        </button>
+        {contractToggleOpen && (
+          <div className="mt-3 rounded-lg border border-neutral-200 bg-white p-2">
+            {contractPreviewLoading ? (
+              <p className="py-8 text-center text-neutral-500">Загрузка…</p>
+            ) : contractPreviewHtml ? (
+              <iframe
+                title="Текст договора"
+                srcDoc={contractPreviewHtml}
+                className="h-[60vh] w-full overflow-auto rounded border-0"
+                sandbox="allow-same-origin"
+              />
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
