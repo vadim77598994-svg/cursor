@@ -21,7 +21,7 @@ BEORG_RESULT_URL = "https://api.beorg.ru/api/document/result"
 # Beorg возвращает 425 Too Early, пока документ обрабатывается — ждём перед первым опросом и при 425 повторяем
 POLL_INITIAL_DELAY = 4.0
 POLL_INTERVAL = 3.0
-POLL_MAX_WAIT = 120.0  # до 2 мин: при «некачественном» изображении Beorg может обрабатывать дольше
+POLL_MAX_WAIT = 150.0  # до 2.5 мин: разворот и прописка могут обрабатываться долго при «некачественном» изображении
 
 
 def _beorg_recognize_sync(project_id: str, token: str, machine_uid: str, images_b64: list[str]) -> dict[str, Any] | None:

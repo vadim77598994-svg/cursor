@@ -61,8 +61,8 @@ export type GenerateContractResult = {
   message?: string;
 };
 
-// Должен быть больше POLL_MAX_WAIT на бэкенде (120 с), иначе клиент обрывает запрос раньше ответа
-const RECOGNIZE_PASSPORT_TIMEOUT_MS = 140_000;
+// Должен быть больше POLL_MAX_WAIT на бэкенде (150 с), иначе клиент обрывает запрос — «fetch is aborted»
+const RECOGNIZE_PASSPORT_TIMEOUT_MS = 180_000;
 
 /** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются. Может занять до ~2 мин. */
 export async function recognizePassport(
