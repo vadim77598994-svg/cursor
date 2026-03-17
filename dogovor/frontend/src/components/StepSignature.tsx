@@ -151,10 +151,7 @@ export function StepSignature({
     lastPointRef.current = { x, y };
   };
 
-  const endDrawing = () => {
-    lastPointRef.current = null;
-    setIsDrawing(false);
-  }; = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  const endDrawingTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     lastPointRef.current = null;
     setIsDrawing(false);
