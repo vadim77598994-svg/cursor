@@ -28,8 +28,8 @@ type StepScanProps = {
 
 export function StepScan({ location, staff, onRecognized, onManual }: StepScanProps) {
   const [phase, setPhase] = useState<Phase>("spread");
-  const [spreadData, setSpreadData] = useState<Partial<PatientData> | null>(null);
   const [spreadFile, setSpreadFile] = useState<File | null>(null);
+  const [registrationFile, setRegistrationFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,33 +64,20 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   };
 
   const handleRecognize = async () => {
-    if (!file) {
-      setError(phase === "spread" ? "Сначала выберите или сделайте фото разворота" : "Сначала выберите фото страницы с пропиской");
+    if (!spreadFile) {
+      setError("Сначала сделайте фото разворота (стр. 2–3)");
       return;
     }
     setError(null);
     setLoading(true);
     setProgress(0);
     try {
-      if (phase === "spread") {
-        const result = await recognizePassport(file);
-        if (result && (result.patient_fio || result.passport_series || result.passport_number)) {
-          setSpreadData(result);
-          setSpreadFile(file);
-          clearImage();
-          setPhase("registration");
-          setFile(null);
-        }
-        return;
-      }
-      if (phase === "registration" && spreadFile) {
-        const result = await recognizePassport(spreadFile, file);
-        if (result && (result.patient_fio || result.passport_series || result.reg_address)) {
-          clearImage();
-          setSpreadFile(null);
-          onRecognized(result);
-        }
-        return;
+      const result = await recognizePassport(spreadFile, registrationFile);
+      if (result && (result.patient_fio || result.passport_series || result.passport_number || result.reg_address)) {
+        clearImage();
+        setSpreadFile(null);
+        setRegistrationFile(null);
+        onRecognized(result);
       }
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
@@ -101,21 +88,39 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
     }
   };
 
-  const handleManual = () => {
-    if (phase === "registration" && spreadData) {
-      onRecognized(spreadData);
-    } else {
-      onManual();
+  const handleNextToRegistration = () => {
+    if (!file) {
+      setError("Сначала выберите или сделайте фото разворота (стр. 2–3)");
+      return;
     }
+    setError(null);
+    setSpreadFile(file);
+    setRegistrationFile(null);
     clearImage();
-    setSpreadData(null);
+    setPhase("registration");
+  };
+
+  const handleSetRegistration = () => {
+    if (!file) {
+      setError("Сначала выберите или сделайте фото страницы с пропиской");
+      return;
+    }
+    setError(null);
+    setRegistrationFile(file);
+    clearImage();
+  };
+
+  const handleManual = () => {
+    onManual();
+    clearImage();
     setSpreadFile(null);
+    setRegistrationFile(null);
     setPhase("spread");
   };
 
   const handleBackToSpread = () => {
-    setSpreadData(null);
     setSpreadFile(null);
+    setRegistrationFile(null);
     setPhase("spread");
     setError(null);
   };
@@ -143,20 +148,18 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
         </h2>
         <p className="mt-1 text-[13px] text-[var(--pye-muted)]">
           {phase === "spread"
-            ? "Шаг 1: сфотографируйте разворот с фото (стр. 2–3). Разместите паспорт в кадре, избегайте бликов."
-            : "Шаг 2: сфотографируйте страницу с пропиской."}
+            ? "Шаг 1: сделайте фото разворота с фото (стр. 2–3). Затем сделайте фото прописки — и отправим оба фото на распознавание одновременно."
+            : "Шаг 2: сделайте фото страницы с пропиской (опционально), затем отправим оба фото на распознавание."}
         </p>
       </div>
 
-      {/* ── Разворот распознан ─────────────────── */}
-      {spreadData && phase === "registration" && (
+      {/* ── Разворот выбран ───────────────────── */}
+      {spreadFile && phase === "registration" && (
         <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
           <p className="font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-accent)]">
-            Разворот распознан
+            Разворот выбран
           </p>
-          <p className="mt-1 truncate text-[13px] text-[var(--pye-text)]">
-            {spreadData.patient_fio || "—"}, {spreadData.passport_series || "—"} {spreadData.passport_number || "—"}
-          </p>
+          <p className="mt-1 text-[13px] text-[var(--pye-text)]">Фото сохранено. Теперь можно добавить прописку.</p>
           <button
             type="button"
             onClick={handleBackToSpread}
@@ -164,6 +167,16 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
           >
             Распознать заново
           </button>
+        </div>
+      )}
+
+      {/* ── Прописка выбрана ───────────────────── */}
+      {registrationFile && phase === "registration" && (
+        <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
+          <p className="font-mono text-[9px] uppercase tracking-[.12em] text-emerald-600">
+            Прописка выбрана
+          </p>
+          <p className="mt-1 text-[13px] text-[var(--pye-text)]">Фото сохранено. Можно отправлять на распознавание.</p>
         </div>
       )}
 
@@ -186,8 +199,8 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
           </span>
           <span className="mt-1 block font-mono text-[10px] leading-relaxed text-[var(--pye-muted)]">
             {phase === "spread"
-              ? "Автоматическое распознавание через камеру устройства"
-              : "Страница с адресом регистрации"}
+              ? "Сначала разворот, потом (по желанию) прописка — и распознаём одним запросом"
+              : "Опционально: если есть время — добавьте страницу с адресом регистрации"}
           </span>
           <span
             className="absolute right-5 top-1/2 -translate-y-1/2 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
@@ -239,7 +252,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             </button>
             <button
               type="button"
-              onClick={handleRecognize}
+              onClick={phase === "spread" ? handleNextToRegistration : handleSetRegistration}
               disabled={loading}
               className="flex min-h-[44px] flex-1 items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-4 py-3 transition-colors hover:bg-[#1C1C18] disabled:opacity-50"
             >
@@ -249,12 +262,40 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
                     ? `Распознаём… ${progress}%`
                     : "Распознаём…"
                   : phase === "spread"
-                  ? "Распознать разворот"
-                  : "Распознать прописку"}
+                  ? "Далее — фото прописки"
+                  : "Сохранить фото прописки"}
               </span>
               {!loading && <span className="ml-2 font-mono text-white" aria-hidden>→</span>}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Запуск распознавания ───────────────── */}
+      {phase === "registration" && spreadFile && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={handleRecognize}
+            disabled={loading}
+            className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18] disabled:opacity-50"
+          >
+            <span className="flex-1 text-center text-[13px] font-medium text-white">
+              {loading
+                ? progress > 0
+                  ? `Распознаём… ${progress}%`
+                  : "Распознаём…"
+                : registrationFile
+                ? "Распознать (разворот + прописка)"
+                : "Распознать (только разворот)"}
+            </span>
+            {!loading && <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>}
+          </button>
+          {!registrationFile && (
+            <p className="text-center font-mono text-[10px] text-[var(--pye-muted)]">
+              Прописка опциональна — можно распознать только разворот, а адрес ввести вручную на следующем шаге.
+            </p>
+          )}
         </div>
       )}
 
