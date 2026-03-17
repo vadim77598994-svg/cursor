@@ -61,9 +61,10 @@ export type GenerateContractResult = {
   message?: string;
 };
 
-const RECOGNIZE_PASSPORT_TIMEOUT_MS = 90_000;
+// Должен быть больше POLL_MAX_WAIT на бэкенде (120 с), иначе клиент обрывает запрос раньше ответа
+const RECOGNIZE_PASSPORT_TIMEOUT_MS = 140_000;
 
-/** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются на сервере. Может занять до ~60 с. */
+/** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются. Может занять до ~2 мин. */
 export async function recognizePassport(
   imageSpread: File,
   imageRegistration?: File | null
@@ -73,11 +74,20 @@ export async function recognizePassport(
   if (imageRegistration) form.append("image_registration", imageRegistration);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), RECOGNIZE_PASSPORT_TIMEOUT_MS);
-  const res = await fetch(`${API_BASE}/api/v1/passport/recognize`, {
-    method: "POST",
-    body: form,
-    signal: controller.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1/passport/recognize`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Превышено время ожидания. Распознавание заняло слишком долго — попробуйте ещё раз.");
+    }
+    throw e;
+  }
   clearTimeout(timeoutId);
   if (res.status === 503) {
     const err = await res.json().catch(() => ({}));

@@ -1,7 +1,9 @@
 """
 Распознавание паспорта РФ через Beorg API (разворот 2–3 и опционально страница прописки).
 Документация: https://docs.beorg.ru/api_docs/universal/passport_reg/
-- Один снимок: type PASSPORT; два снимка (разворот + прописка): type PASSPORT_REG, порядок images = process_info.
+Рукописное/улучшенное качество: https://docs.beorg.ru/api_docs/universal/handwriting/
+- Один снимок: type PASSPORT; два снимка (разворот + прописка): type PASSPORT_REG.
+- stages: ["verification"] — подключён для доп. функционала улучшенного качества (рукописное распознавание).
 - Ответ: documents[].data — LastName, FirstName, MiddleName, IssuedBy, IssueDate, Series, Number, BirthDate, Address.
 Фото в память не сохраняются: принимаем bytes, отправляем в API, возвращаем только извлечённые поля.
 """
