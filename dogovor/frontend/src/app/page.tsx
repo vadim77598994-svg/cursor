@@ -10,6 +10,17 @@ import { StepSignature } from "@/components/StepSignature";
 
 const STEPS = ["Кабинет и врач", "Сканирование", "Проверка данных", "Подпись"];
 
+const MARQUEE_ITEMS = [
+  "ПАЙ ОПТИКС",
+  "—",
+  "КАБИНЕТ ПРОВЕРКИ ЗРЕНИЯ",
+  "—",
+  "ОФОРМЛЕНИЕ ДОГОВОРА",
+  "—",
+  "МОСКВА · САНКТ-ПЕТЕРБУРГ",
+  "—",
+];
+
 const emptyPatient: PatientData = {
   patient_fio: "",
   patient_birth_date: "",
@@ -34,97 +45,138 @@ export default function DogovorPage() {
     setPatient(emptyPatient);
   };
 
+  const marqueeItems = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8 pb-[env(safe-area-inset-bottom)]">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">
-            Оформление договора
-          </h1>
-          <p className="mt-1 text-neutral-500">
-            ПАЙ ОПТИКС — кабинет проверки зрения
-          </p>
-        </div>
-        <Image
-          src="/logo.png"
-          alt="P.Y.E"
-          width={192}
-          height={64}
-          className="h-16 w-auto shrink-0 object-contain"
-          priority
-        />
-      </div>
-
-      {step > 0 && (
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setStep(step - 1)}
-            className="flex min-h-[44px] items-center gap-2 text-neutral-600 hover:text-neutral-900"
-          >
-            <span aria-hidden>←</span>
-            <span>Назад</span>
-          </button>
-        </div>
-      )}
-
-      <div className="mb-10">
-        <div className="flex justify-between gap-1">
-          {STEPS.map((label, i) => (
-            <div
-              key={label}
-              className={`h-1.5 flex-1 rounded-full transition ${
-                i <= step ? "bg-[#0f0f0f]" : "bg-neutral-300"
+    <>
+      {/* ── MARQUEE STRIP ─────────────────────────── */}
+      <div className="overflow-hidden bg-[var(--pye-text)] py-[7px]" aria-hidden>
+        <div className="pye-marquee-inner">
+          {marqueeItems.map((item, i) => (
+            <span
+              key={i}
+              className={`px-7 font-mono text-[10px] tracking-[.12em] ${
+                item === "—" ? "text-white/25" : "text-white/80"
               }`}
-              title={label}
-            />
+            >
+              {item}
+            </span>
           ))}
         </div>
-        <p className="mt-2 text-sm font-medium text-neutral-500">
-          Шаг {step + 1} из {STEPS.length}: {STEPS[step]}
-        </p>
       </div>
 
-      {step === 0 && (
-        <StepCabinet
-          onNext={(loc, s) => {
-            setLocation(loc);
-            setStaff(s);
-            setStep(1);
-          }}
-        />
-      )}
+      {/* ── MAIN ──────────────────────────────────── */}
+      <main className="mx-auto min-h-screen max-w-xl px-4 py-10 pb-[env(safe-area-inset-bottom)]">
 
-      {step === 1 && location && staff && (
-        <StepScan
-          location={location}
-          staff={staff}
-          onRecognized={(parsed) => {
-            setPatient((prev) => ({ ...prev, ...parsed }));
-            setStep(2);
-          }}
-          onManual={() => setStep(2)}
-        />
-      )}
+        {/* HEADER */}
+        <div className="mb-10 flex items-start justify-between gap-4">
+          <div>
+            <p className="mb-1 font-mono text-[9px] uppercase tracking-[.16em] text-[var(--pye-muted)]">
+              Оформление договора
+            </p>
+            <h1 className="text-xl font-semibold leading-tight tracking-tight text-[var(--pye-text)]">
+              ПАЙ ОПТИКС
+            </h1>
+          </div>
+          <Image
+            src="/logo.png"
+            alt="P.Y.E"
+            width={96}
+            height={40}
+            className="h-10 w-auto shrink-0 object-contain"
+            priority
+          />
+        </div>
 
-      {step === 2 && (
-        <StepReview
-          patient={patient}
-          onChange={setPatient}
-          onNext={() => setStep(3)}
-        />
-      )}
+        {/* PROGRESS */}
+        <div className="mb-9">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] font-medium text-[var(--pye-accent)]">
+                {String(step + 1).padStart(2, "0")}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[.1em] text-[var(--pye-muted)]">
+                {STEPS[step]}
+              </span>
+            </div>
+            <span className="font-mono text-[10px] text-[var(--pye-border)]">
+              / {String(STEPS.length).padStart(2, "0")}
+            </span>
+          </div>
+          <div className="flex gap-[3px]">
+            {STEPS.map((_, i) => (
+              <div
+                key={i}
+                className={`h-[1.5px] flex-1 rounded-full transition-colors duration-300 ${
+                  i < step
+                    ? "bg-[var(--pye-text)]"
+                    : i === step
+                    ? "bg-[var(--pye-accent)]"
+                    : "bg-[var(--pye-border)]"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-      {step === 3 && location && staff && (
-        <StepSignature
-          location={location}
-          staff={staff}
-          patient={patient}
-          onPatientChange={setPatient}
-          onSuccess={() => {}}
-          onReset={resetFlow}
-        />
-      )}
-    </main>
+        {/* BACK BUTTON */}
+        {step > 0 && (
+          <div className="mb-7">
+            <button
+              type="button"
+              onClick={() => setStep(step - 1)}
+              className="flex min-h-[44px] items-center gap-1.5 font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)] transition-colors hover:text-[var(--pye-text)]"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+                <path d="M9 6H3M5 4L3 6l2 2" />
+              </svg>
+              Назад
+            </button>
+          </div>
+        )}
+
+        {/* STEPS */}
+        {step === 0 && (
+          <StepCabinet
+            onNext={(loc, s) => {
+              setLocation(loc);
+              setStaff(s);
+              setStep(1);
+            }}
+          />
+        )}
+
+        {step === 1 && location && staff && (
+          <StepScan
+            location={location}
+            staff={staff}
+            onRecognized={(parsed) => {
+              setPatient((prev) => ({ ...prev, ...parsed }));
+              setStep(2);
+            }}
+            onManual={() => setStep(2)}
+          />
+        )}
+
+        {step === 2 && (
+          <StepReview
+            patient={patient}
+            onChange={setPatient}
+            onNext={() => setStep(3)}
+          />
+        )}
+
+        {step === 3 && location && staff && (
+          <StepSignature
+            location={location}
+            staff={staff}
+            patient={patient}
+            onPatientChange={setPatient}
+            onSuccess={() => {}}
+            onReset={resetFlow}
+          />
+        )}
+      </main>
+    </>
   );
 }

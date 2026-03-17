@@ -135,31 +135,42 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
 
   return (
     <div className="space-y-6">
+
+      {/* ── Заголовок ──────────────────────────── */}
       <div>
-        <h2 className="text-xl font-semibold text-neutral-900">Сканирование паспорта</h2>
-        <p className="mt-1 text-neutral-500">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[.05em] text-[var(--pye-text)]">
+          Сканирование паспорта
+        </h2>
+        <p className="mt-1 text-[13px] text-[var(--pye-muted)]">
           {phase === "spread"
-            ? "Шаг 1: сфотографируйте разворот с фото (страницы 2–3). Разместите паспорт в кадре, избегайте бликов."
+            ? "Шаг 1: сфотографируйте разворот с фото (стр. 2–3). Разместите паспорт в кадре, избегайте бликов."
             : "Шаг 2: сфотографируйте страницу с пропиской."}
         </p>
       </div>
 
+      {/* ── Разворот распознан ─────────────────── */}
       {spreadData && phase === "registration" && (
-        <div className="rounded-lg bg-green-50 p-3 text-sm text-neutral-700">
-          <p className="font-medium text-green-800">Разворот распознан</p>
-          <p className="mt-1 truncate">{spreadData.patient_fio || "—"}, {spreadData.passport_series || "—"} {spreadData.passport_number || "—"}</p>
+        <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
+          <p className="font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-accent)]">
+            Разворот распознан
+          </p>
+          <p className="mt-1 truncate text-[13px] text-[var(--pye-text)]">
+            {spreadData.patient_fio || "—"}, {spreadData.passport_series || "—"} {spreadData.passport_number || "—"}
+          </p>
           <button
             type="button"
             onClick={handleBackToSpread}
-            className="mt-2 text-neutral-900 underline"
+            className="mt-2 font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)] underline underline-offset-2 hover:text-[var(--pye-text)] transition-colors"
           >
-            Распознать разворот заново
+            Распознать заново
           </button>
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="flex min-h-touch flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-3 font-medium text-neutral-900 hover:bg-neutral-50">
+      {/* ── Опции ──────────────────────────────── */}
+      <div className="space-y-2">
+        {/* Первичная опция — фото */}
+        <label className="group relative block cursor-pointer rounded-md border border-[var(--pye-border)] bg-white px-5 py-5 transition-colors hover:border-[var(--pye-text)]">
           <input
             type="file"
             accept="image/*"
@@ -167,71 +178,113 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             onChange={handleFile}
             disabled={loading}
           />
-          {phase === "spread" ? "Фото разворота" : "Фото прописки"}
+          <span className="mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] text-[var(--pye-accent)]">
+            {phase === "spread" ? "Рекомендуется" : "Шаг 2"}
+          </span>
+          <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
+            {phase === "spread" ? "Фото разворота" : "Фото прописки"}
+          </span>
+          <span className="mt-1 block font-mono text-[10px] leading-relaxed text-[var(--pye-muted)]">
+            {phase === "spread"
+              ? "Автоматическое распознавание через камеру устройства"
+              : "Страница с адресом регистрации"}
+          </span>
+          <span
+            className="absolute right-5 top-1/2 -translate-y-1/2 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
+            aria-hidden
+          >
+            →
+          </span>
         </label>
+
+        {/* Вторичная опция — вручную */}
         <button
           type="button"
           onClick={handleManual}
           disabled={loading}
-          className="min-h-touch rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+          className="group flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-5 py-4 text-left transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
         >
-          Ввести вручную
+          <div>
+            <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
+              Ввести вручную
+            </span>
+            <span className="mt-0.5 block font-mono text-[10px] text-[var(--pye-muted)]">
+              Заполнить самостоятельно
+            </span>
+          </div>
+          <span
+            className="ml-4 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
+            aria-hidden
+          >
+            →
+          </span>
         </button>
       </div>
 
+      {/* ── Предпросмотр фото ──────────────────── */}
       {previewUrl && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-2">
+        <div className="rounded-md border border-[var(--pye-border)] bg-white p-3">
           <img
             src={previewUrl}
             alt="Предпросмотр"
-            className="max-h-48 w-full object-contain"
+            className="max-h-48 w-full rounded object-contain"
           />
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <button
-                type="button"
-                onClick={() => {
-                  clearImage();
-                  setError(null);
-                }}
-                className="min-h-touch rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
-              >
-                Убрать фото
-              </button>
+              type="button"
+              onClick={() => { clearImage(); setError(null); }}
+              className="min-h-[44px] rounded-[4px] border border-[var(--pye-border)] px-3 py-2 font-mono text-[11px] uppercase tracking-[.06em] text-[var(--pye-muted)] transition-colors hover:border-[var(--pye-text)] hover:text-[var(--pye-text)]"
+            >
+              Убрать
+            </button>
             <button
               type="button"
               onClick={handleRecognize}
               disabled={loading}
-              className="min-h-touch flex-1 rounded-lg bg-neutral-900 px-4 py-3 font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+              className="flex min-h-[44px] flex-1 items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-4 py-3 transition-colors hover:bg-[#1C1C18] disabled:opacity-50"
             >
-              {loading
-                ? (progress > 0 ? `Распознаём… ${progress}%` : "Распознаём…")
-                : phase === "spread"
+              <span className="flex-1 text-center text-[13px] font-medium text-white">
+                {loading
+                  ? progress > 0
+                    ? `Распознаём… ${progress}%`
+                    : "Распознаём…"
+                  : phase === "spread"
                   ? "Распознать разворот"
                   : "Распознать прописку"}
+              </span>
+              {!loading && <span className="ml-2 font-mono text-white" aria-hidden>→</span>}
             </button>
           </div>
         </div>
       )}
 
+      {/* ── Ошибка ────────────────────────────── */}
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-red-800">{error}</div>
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
+          {error}
+        </div>
       )}
 
-      <div className="mt-8 border-t border-neutral-200 pt-6">
+      {/* ── Договор ───────────────────────────── */}
+      <div className="border-t border-[var(--pye-border)] pt-5">
         <button
           type="button"
           onClick={() => setContractToggleOpen((o) => !o)}
-          className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-3 text-left font-medium text-neutral-900 hover:bg-neutral-100"
+          className="flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-[18px] py-3.5 text-left transition-colors hover:border-[var(--pye-text)]"
         >
-          <span>Ознакомиться с текстом договора</span>
-          <span className="text-neutral-500" aria-hidden>
+          <span className="text-[13px] font-medium text-[var(--pye-text)]">
+            Ознакомиться с текстом договора
+          </span>
+          <span className="font-mono text-[11px] text-[var(--pye-muted)]" aria-hidden>
             {contractToggleOpen ? "▼" : "▶"}
           </span>
         </button>
         {contractToggleOpen && (
-          <div className="mt-3 rounded-lg border border-neutral-200 bg-white p-2">
+          <div className="mt-2 rounded-md border border-[var(--pye-border)] bg-white p-2">
             {contractPreviewLoading ? (
-              <p className="py-8 text-center text-neutral-500">Загрузка…</p>
+              <p className="py-8 text-center font-mono text-[11px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
+                Загрузка…
+              </p>
             ) : contractPreviewHtml ? (
               <iframe
                 title="Текст договора"
@@ -243,6 +296,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
           </div>
         )}
       </div>
+
     </div>
   );
 }

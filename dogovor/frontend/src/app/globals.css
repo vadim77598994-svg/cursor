@@ -2,25 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* PYE-стиль: светло-серый фон, графит/чёрный акцент */
+/* ── DESIGN TOKENS ─────────────────────────────────── */
 :root {
-  --pye-bg: #dedede;
-  --pye-text: #171717;
-  --pye-muted: #737373;
-  --pye-accent: #0f0f0f;
-  --pye-border: #d0d0d0;
+  --pye-bg:      #F8F8F6;
+  --pye-surface: #FFFFFF;
+  --pye-text:    #0C0C0A;
+  --pye-muted:   #8A8A82;
+  --pye-border:  #E4E4DC;
+  --pye-accent:  #E8440A;
 }
 
+/* ── BASE ─────────────────────────────────────────── */
 body {
   @apply antialiased;
   background-color: var(--pye-bg);
+  background-image: radial-gradient(circle, #C2C2BB 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
   color: var(--pye-text);
   font-size: 16px;
   line-height: 1.6;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ── MARQUEE ──────────────────────────────────────── */
+@keyframes pye-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.pye-marquee-inner {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: pye-marquee 30s linear infinite;
 }
