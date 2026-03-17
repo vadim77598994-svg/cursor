@@ -85,6 +85,7 @@ export default function DogovorPage() {
             height={40}
             className="h-10 w-auto shrink-0 object-contain"
             priority
+            unoptimized
           />
         </div>
 
