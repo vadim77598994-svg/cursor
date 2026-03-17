@@ -13,6 +13,11 @@ type StepSignatureProps = {
   onReset: () => void;
 };
 
+// Внутреннее разрешение канваса 2× — подпись в PDF без пикселизации
+const CANVAS_SCALE = 2;
+const CANVAS_LOGICAL_W = 600;
+const CANVAS_LOGICAL_H = 220;
+
 export function StepSignature({
   location,
   staff,
@@ -27,27 +32,6 @@ export function StepSignature({
   const [canShare, setCanShare] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-
-  useEffect(() => {
-    setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
-  }, []);
-
-  // Внутреннее разрешение канваса в 2× от отображаемого — подпись в PDF без пикселизации
-  const CANVAS_SCALE = 2;
-  const CANVAS_LOGICAL_W = 600;
-  const CANVAS_LOGICAL_H = 220;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.strokeStyle = "#1f2937";
-    ctx.lineWidth = 2 * CANVAS_SCALE;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.imageSmoothingEnabled = true;
-  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -55,6 +39,22 @@ export function StepSignature({
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = "#0C0C0A";
+    ctx.lineWidth = 2 * CANVAS_SCALE;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.imageSmoothingEnabled = true;
+  }, []);
 
   const getSignatureDataUrl = useCallback(() => {
     const canvas = canvasRef.current;
@@ -189,10 +189,7 @@ export function StepSignature({
       const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
         type: "application/pdf",
       });
-      await navigator.share({
-        title: `Договор № ${result.contract_number}`,
-        files: [file],
-      });
+      await navigator.share({ title: `Договор № ${result.contract_number}`, files: [file] });
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
         setError((err as Error).message || "Не удалось загрузить или отправить PDF");
@@ -218,54 +215,104 @@ export function StepSignature({
     }
   }, [contractId, done, canShare, patient.patient_email]);
 
+  // ── УСПЕХ ───────────────────────────────────────────────
   if (done) {
     return (
-      <div className="rounded-xl border-2 border-green-200 bg-green-50 p-8 text-center">
-        <p className="text-xl font-semibold text-green-800">Договор оформлен</p>
-        <p className="mt-2 text-2xl font-bold text-green-900">№ {done}</p>
-        {contractId && (
-          <p className="mt-2 text-sm text-neutral-500">ID в БД: {contractId}</p>
-        )}
-        {pdfPath ? (
-          <p className="mt-4 text-neutral-600">PDF сохранён: {pdfPath}</p>
-        ) : (
-          <p className="mt-4 text-amber-700">PDF не сгенерирован. Проверьте логи бэкенда и наличие xhtml2pdf; bucket «contracts» в Supabase Storage.</p>
-        )}
-        {emailSent ? (
-          <p className="mt-2 text-green-700 font-medium">Договор отправлен на email клиента.</p>
-        ) : (
-          <p className="mt-2 text-amber-700">
-            Письмо не отправлено.{emailFailReason ? ` ${emailFailReason}` : " Проверьте email в данных или настройки почты на сервере (Resend на Railway)."}
-          </p>
-        )}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="min-h-touch rounded-lg border border-neutral-300 bg-white px-6 py-3 font-medium text-neutral-800 hover:bg-neutral-50"
-          >
-            {canShare ? "Поделиться PDF" : "Отправить по email"}
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="min-h-touch rounded-lg bg-neutral-900 px-6 py-3 text-white hover:bg-neutral-800"
-          >
-            Оформить следующий договор
-          </button>
+      <div className="space-y-4">
+        {/* Главная карточка успеха */}
+        <div className="relative">
+          <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <div className="rounded-md border border-[var(--pye-border)] bg-white px-6 py-7 text-center">
+            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.16em] text-[var(--pye-accent)]">
+              Договор оформлен
+            </p>
+            <p className="text-3xl font-semibold tracking-tight text-[var(--pye-text)]">
+              № {done}
+            </p>
+            {contractId && (
+              <p className="mt-2 font-mono text-[10px] text-[var(--pye-muted)]">
+                ID: {contractId}
+              </p>
+            )}
+
+            <div className="mx-auto mt-5 max-w-xs space-y-1.5 text-left">
+              {pdfPath ? (
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-accent)]">✓</span>
+                  <span className="font-mono text-[10px] text-[var(--pye-muted)]">PDF сохранён</span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 font-mono text-[10px] text-[#C8460A]">!</span>
+                  <span className="font-mono text-[10px] text-[var(--pye-muted)]">
+                    PDF не сгенерирован — проверьте логи бэкенда
+                  </span>
+                </div>
+              )}
+              {emailSent ? (
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-accent)]">✓</span>
+                  <span className="font-mono text-[10px] text-[var(--pye-muted)]">
+                    Договор отправлен на email клиента
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 font-mono text-[10px] text-[#C8460A]">!</span>
+                  <span className="font-mono text-[10px] text-[var(--pye-muted)]">
+                    {emailFailReason ?? "Письмо не отправлено — проверьте настройки почты"}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Кнопки */}
+        <button
+          type="button"
+          onClick={handleShare}
+          className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
+            {canShare ? "Поделиться PDF" : "Отправить по email"}
+          </span>
+          <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18]"
+        >
+          <span className="flex-1 text-center text-[13px] font-medium text-white">
+            Оформить следующий договор
+          </span>
+          <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>
+        </button>
       </div>
     );
   }
 
+  // ── ФОРМА ПОДПИСИ ────────────────────────────────────────
   return (
     <div className="space-y-6">
+
+      {/* Заголовок */}
       <div>
-        <h2 className="text-xl font-semibold text-neutral-900">Подпись клиента</h2>
-        <p className="mt-1 text-neutral-500">При желании ознакомьтесь с договором и поставьте подпись</p>
+        <h2 className="text-[13px] font-semibold uppercase tracking-[.05em] text-[var(--pye-text)]">
+          Подпись клиента
+        </h2>
+        <p className="mt-0.5 font-mono text-[11px] text-[var(--pye-muted)]">
+          При желании ознакомьтесь с договором и поставьте подпись
+        </p>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white">
+      {/* Договор — аккордеон */}
+      <div>
         <button
           type="button"
           onClick={async () => {
@@ -274,11 +321,7 @@ export function StepSignature({
             if (next && !contractPreviewHtml && !contractPreviewLoading) {
               setContractPreviewLoading(true);
               try {
-                const { html } = await previewContract({
-                  location_id: location.id,
-                  staff_id: staff.id,
-                  patient,
-                });
+                const { html } = await previewContract({ location_id: location.id, staff_id: staff.id, patient });
                 setContractPreviewHtml(html);
               } catch {
                 setContractPreviewHtml("<p>Не удалось загрузить текст договора.</p>");
@@ -287,20 +330,26 @@ export function StepSignature({
               }
             }
           }}
-          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+          className="flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-[18px] py-3.5 text-left transition-colors hover:border-[var(--pye-text)]"
         >
-          <span>Ознакомиться с договором</span>
-          <span className="text-neutral-400" aria-hidden>{contractToggleOpen ? "▼" : "▶"}</span>
+          <span className="text-[13px] font-medium text-[var(--pye-text)]">
+            Ознакомиться с договором
+          </span>
+          <span className="font-mono text-[11px] text-[var(--pye-muted)]" aria-hidden>
+            {contractToggleOpen ? "▼" : "▶"}
+          </span>
         </button>
         {contractToggleOpen && (
-          <div className="max-h-[60vh] overflow-auto border-t border-neutral-200">
+          <div className="mt-2 rounded-md border border-[var(--pye-border)] bg-white p-2">
             {contractPreviewLoading ? (
-              <p className="p-4 text-sm text-neutral-500">Загрузка…</p>
+              <p className="py-8 text-center font-mono text-[11px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
+                Загрузка…
+              </p>
             ) : contractPreviewHtml ? (
               <iframe
                 title="Текст договора"
                 srcDoc={contractPreviewHtml}
-                className="h-[55vh] w-full border-0 bg-white p-4 text-left text-sm"
+                className="h-[55vh] w-full border-0 bg-white"
                 sandbox="allow-same-origin"
               />
             ) : null}
@@ -308,72 +357,110 @@ export function StepSignature({
         )}
       </div>
 
-      <div>
-        <p className="mb-2 text-sm font-medium text-neutral-700">Подпись клиента</p>
-        <div className="rounded-lg border border-neutral-200 bg-white p-2">
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_LOGICAL_W * CANVAS_SCALE}
-          height={CANVAS_LOGICAL_H * CANVAS_SCALE}
-          className="block w-full touch-none rounded-lg border border-neutral-200"
-          style={{ maxWidth: "100%", height: "auto", minHeight: 180 }}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={endDrawing}
-          onMouseLeave={endDrawing}
-          onTouchStart={startDrawingTouch}
-          onTouchMove={drawTouch}
-          onTouchEnd={endDrawingTouch}
-        />
+      {/* Канвас подписи */}
+      <div className="relative">
+        <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+        <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+        <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+        <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+
+        <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white">
+          {/* Подпись лейбл */}
+          <div className="flex items-center justify-between border-b border-[var(--pye-border)] px-[18px] py-2.5">
+            <span className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--pye-muted)]">
+              Подпись
+            </span>
+            <button
+              type="button"
+              onClick={clearCanvas}
+              disabled={isSubmitting}
+              className="font-mono text-[9px] uppercase tracking-[.08em] text-[var(--pye-muted)] underline underline-offset-2 transition-colors hover:text-[var(--pye-text)] disabled:opacity-40"
+            >
+              Очистить
+            </button>
+          </div>
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_LOGICAL_W * CANVAS_SCALE}
+            height={CANVAS_LOGICAL_H * CANVAS_SCALE}
+            className="block w-full touch-none cursor-crosshair bg-white"
+            style={{ maxWidth: "100%", height: "auto", minHeight: 180 }}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={endDrawing}
+            onMouseLeave={endDrawing}
+            onTouchStart={startDrawingTouch}
+            onTouchMove={drawTouch}
+            onTouchEnd={endDrawingTouch}
+          />
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <button
-          type="button"
-          onClick={clearCanvas}
-          disabled={isSubmitting}
-          className="min-h-touch order-1 rounded-lg border border-neutral-300 px-4 py-3 font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 sm:order-1"
-        >
-          Очистить
-        </button>
-        {onPatientChange && (
-          <div className="order-2 min-w-0 flex-1 sm:order-2">
-            <label className="mb-1 block text-sm font-medium text-neutral-700">Email для отправки договора</label>
+      {/* Email поле */}
+      {onPatientChange && (
+        <div className="relative">
+          <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
+          <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white focus-within:border-[var(--pye-text)]">
+            <label
+              htmlFor="patient-email"
+              className="block px-[18px] pt-2.5 font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-muted)]"
+            >
+              Email для отправки договора
+            </label>
             <input
+              id="patient-email"
               type="email"
               value={patient.patient_email ?? ""}
               onChange={(e) => onPatientChange({ ...patient, patient_email: e.target.value || undefined })}
               placeholder="client@example.com"
-              className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-base focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
+              className="block w-full border-none bg-transparent px-[18px] pb-3 pt-1 text-[13px] text-[var(--pye-text)] outline-none placeholder:text-[var(--pye-border)] focus:ring-0"
             />
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Кнопки действий */}
+      <div className="space-y-2">
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="min-h-touch order-3 w-full rounded-lg bg-neutral-900 px-6 py-4 text-base font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50 sm:order-3 sm:flex-1"
+          className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? "Формируем договор…" : "Подписать и отправить"}
+          <span className="flex-1 text-center text-[13px] font-medium text-white">
+            {isSubmitting ? "Формируем договор…" : "Подписать и отправить"}
+          </span>
+          {!isSubmitting && <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>}
         </button>
+
         {canShare && (
           <button
             type="button"
             onClick={handleShareClick}
             disabled={isSubmitting}
-            className="min-h-touch order-4 w-full rounded-lg border border-neutral-300 bg-white px-6 py-3 font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50 sm:order-4"
+            className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
           >
-            Подписать и поделиться
+            <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
+              Подписать и поделиться
+            </span>
+            <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
           </button>
         )}
       </div>
+
+      {/* Лоадер */}
       {isSubmitting && (
-        <p className="text-center text-sm text-neutral-500">Подождите, формируем PDF (до 2 мин)…</p>
+        <p className="text-center font-mono text-[11px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
+          Подождите, формируем PDF (до 2 мин)…
+        </p>
       )}
 
+      {/* Ошибка */}
       {error && (
-        <div className="rounded-xl bg-red-50 p-4 text-red-800">
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
           {error}
         </div>
       )}
