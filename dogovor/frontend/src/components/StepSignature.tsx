@@ -31,6 +31,7 @@ export function StepSignature({
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export function StepSignature({
     const { x, y } = getCoords(canvas, e.clientX, e.clientY);
     ctx.beginPath();
     ctx.moveTo(x, y);
+    lastPointRef.current = { x, y };
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -99,11 +101,20 @@ export function StepSignature({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const { x, y } = getCoords(canvas, e.clientX, e.clientY);
-    ctx.lineTo(x, y);
+    const last = lastPointRef.current;
+    if (last) {
+      ctx.quadraticCurveTo((last.x + x) / 2, (last.y + y) / 2, x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
     ctx.stroke();
+    lastPointRef.current = { x, y };
   };
 
-  const endDrawing = () => setIsDrawing(false);
+  const endDrawing = () => {
+    lastPointRef.current = null;
+    setIsDrawing(false);
+  };
 
   const startDrawingTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
@@ -117,6 +128,7 @@ export function StepSignature({
     const { x, y } = getCoords(canvas, touch.clientX, touch.clientY);
     ctx.beginPath();
     ctx.moveTo(x, y);
+    lastPointRef.current = { x, y };
   };
 
   const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -129,12 +141,22 @@ export function StepSignature({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const { x, y } = getCoords(canvas, touch.clientX, touch.clientY);
-    ctx.lineTo(x, y);
+    const last = lastPointRef.current;
+    if (last) {
+      ctx.quadraticCurveTo((last.x + x) / 2, (last.y + y) / 2, x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
     ctx.stroke();
+    lastPointRef.current = { x, y };
   };
 
-  const endDrawingTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  const endDrawing = () => {
+    lastPointRef.current = null;
+    setIsDrawing(false);
+  }; = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+    lastPointRef.current = null;
     setIsDrawing(false);
   };
 

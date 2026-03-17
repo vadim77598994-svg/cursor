@@ -16,8 +16,8 @@
 body {
   @apply antialiased;
   background-color: var(--pye-bg);
-  background-image: radial-gradient(circle, #C2C2BB 1.5px, transparent 1.5px);
-  background-size: 22px 22px;
+  background-image: radial-gradient(circle, #D5D5D0 1px, transparent 1px);
+  background-size: 18px 18px;
   color: var(--pye-text);
   font-size: 16px;
   line-height: 1.6;
