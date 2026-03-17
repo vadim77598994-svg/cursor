@@ -156,7 +156,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
       {/* ── Разворот выбран ───────────────────── */}
       {spreadFile && phase === "registration" && (
         <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
-          <p className="font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-accent)]">
+          <p className="font-mono text-[9px] uppercase tracking-[.12em] text-emerald-600">
             Разворот выбран
           </p>
           <p className="mt-1 text-[13px] text-[var(--pye-text)]">Фото сохранено. Теперь можно добавить прописку.</p>
