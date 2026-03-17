@@ -152,7 +152,7 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
                 <span
                   className={`ml-4 h-1.5 w-1.5 shrink-0 rounded-full transition-all ${
                     selectedLocation?.id === loc.id
-                      ? "bg-[var(--pye-accent)] shadow-[0_0_6px_rgba(232,68,10,.45)]"
+                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,.45)]"
                       : "border border-[var(--pye-border)]"
                   }`}
                 />
@@ -198,7 +198,7 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
                   <span
                     className={`ml-4 h-1.5 w-1.5 shrink-0 rounded-full transition-all ${
                       selectedStaff?.id === s.id
-                        ? "bg-[var(--pye-accent)] shadow-[0_0_6px_rgba(232,68,10,.45)]"
+                        ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,.45)]"
                         : "border border-[var(--pye-border)]"
                     }`}
                   />
