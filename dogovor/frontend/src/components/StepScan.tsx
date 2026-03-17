@@ -191,7 +191,11 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             onChange={handleFile}
             disabled={loading}
           />
-          <span className="mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] text-[var(--pye-accent)]">
+          <span
+            className={`mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] ${
+              phase === "spread" ? "text-[var(--pye-accent)]" : registrationFile ? "text-emerald-600" : "text-[var(--pye-accent)]"
+            }`}
+          >
             {phase === "spread" ? "Рекомендуется" : "Шаг 2"}
           </span>
           <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
