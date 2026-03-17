@@ -17,26 +17,30 @@ except ImportError as e:
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 FONTS_DIR = TEMPLATES_DIR.parent / "fonts"
 FONT_FILE_NAME = "DejaVuSans.ttf"
+FONT_BOLD_FILE_NAME = "DejaVuSans-Bold.ttf"
 REPORTLAB_FONT_NAME = "DejaVuSans"
+REPORTLAB_FONT_BOLD_NAME = "DejaVuSans-Bold"
 
 _registered_font = False
 
 
 def _register_dejavu_font():
-    """Регистрирует DejaVu Sans в ReportLab (xhtml2pdf использует ReportLab) — кириллица в PDF."""
+    """Регистрирует DejaVu Sans (обычный и жирный) в ReportLab — кириллица и font-weight: bold в PDF."""
     global _registered_font
     if _registered_font:
-        return
-    font_path = FONTS_DIR / FONT_FILE_NAME
-    if not font_path.exists():
-        logger.warning("DejaVu font not found: %s", font_path)
         return
     try:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
-        pdfmetrics.registerFont(TTFont(REPORTLAB_FONT_NAME, str(font_path)))
+        font_path = FONTS_DIR / FONT_FILE_NAME
+        if font_path.exists():
+            pdfmetrics.registerFont(TTFont(REPORTLAB_FONT_NAME, str(font_path)))
+            logger.debug("Registered font %s for PDF", REPORTLAB_FONT_NAME)
+        bold_path = FONTS_DIR / FONT_BOLD_FILE_NAME
+        if bold_path.exists():
+            pdfmetrics.registerFont(TTFont(REPORTLAB_FONT_BOLD_NAME, str(bold_path)))
+            logger.debug("Registered font %s for PDF", REPORTLAB_FONT_BOLD_NAME)
         _registered_font = True
-        logger.debug("Registered font %s for PDF", REPORTLAB_FONT_NAME)
     except Exception as e:
         logger.warning("Failed to register DejaVu font: %s", e)
 
@@ -60,9 +64,10 @@ def _data_url_to_temp_file(uri: str) -> str | None:
 
 
 def _make_link_callback(base_path: Path):
-    """link_callback для pisa: data URL подписи → temp файл; шрифт fonts/DejaVuSans.ttf → явный путь; остальное — base_path."""
+    """link_callback для pisa: data URL подписи → temp файл; шрифты fonts/*.ttf → явный путь; остальное — base_path."""
     base_path = base_path.resolve()
     font_file = base_path / "fonts" / FONT_FILE_NAME
+    font_bold_file = base_path / "fonts" / FONT_BOLD_FILE_NAME
 
     def link_callback(uri: str, _basepath: str | None = None):
         if not uri or not uri.strip():
@@ -70,7 +75,9 @@ def _make_link_callback(base_path: Path):
         uri = uri.strip()
         if uri.startswith("data:"):
             return _data_url_to_temp_file(uri)
-        # Шрифт для кириллицы: xhtml2pdf запрашивает по url из @font-face
+        # Шрифты для кириллицы и жирного: xhtml2pdf запрашивает по url из @font-face
+        if "fonts" in uri and FONT_BOLD_FILE_NAME in uri and font_bold_file.exists():
+            return str(font_bold_file)
         if ("fonts" in uri and FONT_FILE_NAME in uri) or (uri.endswith(".ttf") and font_file.exists()):
             return str(font_file)
         if Path(uri).is_absolute() and Path(uri).exists():

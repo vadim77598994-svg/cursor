@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 # Шрифт с кириллицей для видимого текста в PDF (xhtml2pdf ищет по пути fonts/ от рабочей директории)
-RUN mkdir -p /app/fonts && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/fonts/
+RUN mkdir -p /app/fonts && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf /app/fonts/
 
 EXPOSE 8080
 ENV PORT=8080
