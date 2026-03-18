@@ -5,9 +5,14 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
 from app.config import settings
+from app.services.passport_jobs import (
+    create_passport_job,
+    get_passport_job,
+    run_passport_recognition_job,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -35,6 +40,64 @@ def _read_upload_in_memory(file: UploadFile, max_size: int = 20 * 1024 * 1024) -
         return None
 
 
+def _ensure_beorg_configured() -> None:
+    if not settings.beorg_project_id or not settings.beorg_token or not settings.beorg_machine_uid:
+        raise HTTPException(
+            status_code=503,
+            detail="Сервис распознавания паспорта не настроен (Beorg). Используйте ручной ввод или настройте BEORG_* в переменных окружения.",
+        )
+
+
+def _read_request_images(
+    image_spread: UploadFile,
+    image_registration: Optional[UploadFile],
+) -> tuple[bytes, bytes | None]:
+    if not image_spread.content_type or not image_spread.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Файл разворота должен быть изображением")
+    spread_bytes = _read_upload_in_memory(image_spread)
+    if not spread_bytes:
+        raise HTTPException(status_code=400, detail="Не удалось прочитать файл разворота или он слишком большой")
+    reg_bytes: bytes | None = None
+    if image_registration and image_registration.filename:
+        if image_registration.content_type and image_registration.content_type.startswith("image/"):
+            reg_bytes = _read_upload_in_memory(image_registration)
+    return spread_bytes, reg_bytes
+
+
+@router.post("/passport/recognize/start")
+async def passport_recognize_start(
+    background_tasks: BackgroundTasks,
+    image_spread: UploadFile = File(..., description="Фото разворота 2–3 стр. паспорта"),
+    image_registration: Optional[UploadFile] = File(None, description="Фото страницы с пропиской (опционально)"),
+):
+    """
+    Запускает распознавание паспорта в фоне и сразу возвращает job_id.
+    Нужен для мобильных сценариев, когда пользователь может свернуть приложение.
+    """
+    _ensure_beorg_configured()
+    spread_bytes, reg_bytes = _read_request_images(image_spread, image_registration)
+    job = create_passport_job()
+    background_tasks.add_task(
+        run_passport_recognition_job,
+        job["job_id"],
+        project_id=settings.beorg_project_id,
+        token=settings.beorg_token,
+        machine_uid=settings.beorg_machine_uid,
+        image_spread=spread_bytes,
+        image_registration=reg_bytes,
+        preprocess=settings.preprocess_passport_image,
+    )
+    return {"job_id": job["job_id"], "status": job["status"]}
+
+
+@router.get("/passport/recognize/status/{job_id}")
+def passport_recognize_status(job_id: str):
+    job = get_passport_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Задача распознавания не найдена или уже устарела")
+    return job
+
+
 @router.post("/passport/recognize")
 async def passport_recognize(
     image_spread: UploadFile = File(..., description="Фото разворота 2–3 стр. паспорта"),
@@ -45,11 +108,7 @@ async def passport_recognize(
     Фото не сохраняются; возвращает поля для формы (ФИО, даты, серия, номер, кем выдан, адрес).
     Требует настройки BEORG_PROJECT_ID, BEORG_TOKEN, BEORG_MACHINE_UID.
     """
-    if not settings.beorg_project_id or not settings.beorg_token or not settings.beorg_machine_uid:
-        raise HTTPException(
-            status_code=503,
-            detail="Сервис распознавания паспорта не настроен (Beorg). Используйте ручной ввод или настройте BEORG_* в переменных окружения.",
-        )
+    _ensure_beorg_configured()
     try:
         from app.services.beorg_recognize import recognize_passport
     except ImportError as e:
@@ -58,15 +117,7 @@ async def passport_recognize(
             status_code=503,
             detail="Модуль распознавания паспорта недоступен (проверьте зависимости, например httpx).",
         ) from e
-    if not image_spread.content_type or not image_spread.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Файл разворота должен быть изображением")
-    spread_bytes = _read_upload_in_memory(image_spread)
-    if not spread_bytes:
-        raise HTTPException(status_code=400, detail="Не удалось прочитать файл разворота или он слишком большой")
-    reg_bytes: bytes | None = None
-    if image_registration and image_registration.filename:
-        if image_registration.content_type and image_registration.content_type.startswith("image/"):
-            reg_bytes = _read_upload_in_memory(image_registration)
+    spread_bytes, reg_bytes = _read_request_images(image_spread, image_registration)
 
     if settings.preprocess_passport_image:
         from app.services.image_enhance import enhance_for_ocr

@@ -2,9 +2,15 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { Location, Staff, PatientData } from "@/lib/api";
-import { recognizePassport, previewContract } from "@/lib/api";
+import {
+  fetchPassportRecognitionStatus,
+  previewContract,
+  startPassportRecognition,
+} from "@/lib/api";
 
 const IMAGE_CLEAR_MS = 30_000;
+const PASSPORT_JOB_STORAGE_KEY = "dogovor:passport-recognition-job-id";
+const PASSPORT_STATUS_POLL_MS = 2000;
 
 type Phase = "spread" | "registration";
 
@@ -35,7 +41,9 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingRef = useRef(false);
   const [contractToggleOpen, setContractToggleOpen] = useState(false);
   const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
@@ -72,18 +80,16 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
     setLoading(true);
     setProgress(0);
     try {
-      const result = await recognizePassport(spreadFile, registrationFile);
-      if (result && (result.patient_fio || result.passport_series || result.passport_number || result.reg_address)) {
-        clearImage();
-        setSpreadFile(null);
-        setRegistrationFile(null);
-        onRecognized(result);
+      const started = await startPassportRecognition(spreadFile, registrationFile);
+      setActiveJobId(started.job_id);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(PASSPORT_JOB_STORAGE_KEY, started.job_id);
       }
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       setError(msg);
-    } finally {
       setLoading(false);
+    } finally {
       setProgress(0);
     }
   };
@@ -115,15 +121,93 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
     clearImage();
     setSpreadFile(null);
     setRegistrationFile(null);
+    setActiveJobId(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(PASSPORT_JOB_STORAGE_KEY);
+    }
     setPhase("spread");
   };
 
   const handleBackToSpread = () => {
     setSpreadFile(null);
     setRegistrationFile(null);
+    setActiveJobId(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(PASSPORT_JOB_STORAGE_KEY);
+    }
     setPhase("spread");
     setError(null);
+    setLoading(false);
   };
+
+  const finishPolling = useCallback(() => {
+    setActiveJobId(null);
+    setLoading(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(PASSPORT_JOB_STORAGE_KEY);
+    }
+  }, []);
+
+  const pollRecognitionStatus = useCallback(async (jobId: string) => {
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+    try {
+      const status = await fetchPassportRecognitionStatus(jobId);
+      if (status.status === "succeeded" && status.result) {
+        clearImage();
+        setSpreadFile(null);
+        setRegistrationFile(null);
+        finishPolling();
+        onRecognized(status.result);
+        return;
+      }
+      if (status.status === "failed") {
+        setError(status.error || "Не удалось распознать паспорт");
+        finishPolling();
+        return;
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        if (/не найдена|устарела/i.test(e.message)) {
+          setError("Распознавание больше недоступно. Начните заново.");
+          finishPolling();
+          return;
+        }
+        if (/load failed|failed to fetch|network/i.test(e.message)) {
+          return;
+        }
+      }
+    } finally {
+      pollingRef.current = false;
+    }
+  }, [clearImage, finishPolling, onRecognized]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedJobId = sessionStorage.getItem(PASSPORT_JOB_STORAGE_KEY);
+    if (storedJobId) {
+      setActiveJobId(storedJobId);
+      setLoading(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeJobId) return;
+    void pollRecognitionStatus(activeJobId);
+    const intervalId = window.setInterval(() => {
+      void pollRecognitionStatus(activeJobId);
+    }, PASSPORT_STATUS_POLL_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void pollRecognitionStatus(activeJobId);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeJobId, pollRecognitionStatus]);
 
   useEffect(() => {
     if (!contractToggleOpen || contractPreviewHtml !== null) return;

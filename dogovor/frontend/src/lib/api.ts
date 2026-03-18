@@ -97,8 +97,23 @@ export type GenerateContractResult = {
   message?: string;
 };
 
+export type PassportRecognitionJobStatus = "pending" | "running" | "succeeded" | "failed";
+
+export type PassportRecognitionStartResult = {
+  job_id: string;
+  status: PassportRecognitionJobStatus;
+};
+
+export type PassportRecognitionStatusResult = {
+  job_id: string;
+  status: PassportRecognitionJobStatus;
+  result?: Partial<PatientData> | null;
+  error?: string | null;
+};
+
 // Общий таймаут распознавания паспорта: один запрос на разворот и, при наличии, страницу прописки.
 const RECOGNIZE_PASSPORT_TIMEOUT_MS = 120_000;
+const RECOGNIZE_PASSPORT_START_TIMEOUT_MS = 60_000;
 
 /** Распознавание паспорта через Beorg: разворот обязателен, прописка опциональна. Фото не сохраняются. Может занять до ~2 мин. */
 export async function recognizePassport(
@@ -166,6 +181,62 @@ export async function recognizePassport(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || "Ошибка распознавания");
+  }
+  return res.json();
+}
+
+export async function startPassportRecognition(
+  imageSpread: File,
+  imageRegistration?: File | null
+): Promise<PassportRecognitionStartResult> {
+  const form = new FormData();
+  form.append("image_spread", imageSpread);
+  if (imageRegistration) form.append("image_registration", imageRegistration);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), RECOGNIZE_PASSPORT_START_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1/passport/recognize/start`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Не удалось отправить фото на распознавание. Проверьте интернет и попробуйте ещё раз.");
+    }
+    if (
+      e instanceof Error &&
+      (e.name === "TypeError" || /load failed|failed to fetch|network/i.test(e.message))
+    ) {
+      throw new Error("Не удалось начать распознавание: проверьте интернет и не сворачивайте приложение во время отправки фото.");
+    }
+    throw e;
+  }
+  clearTimeout(timeoutId);
+  if (res.status === 503) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Сервис распознавания не настроен");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось начать распознавание");
+  }
+  return res.json();
+}
+
+export async function fetchPassportRecognitionStatus(
+  jobId: string
+): Promise<PassportRecognitionStatusResult> {
+  const res = await fetch(`${API_BASE}/api/v1/passport/recognize/status/${jobId}`);
+  if (res.status === 404) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Задача распознавания не найдена");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось получить статус распознавания");
   }
   return res.json();
 }
