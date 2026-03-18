@@ -110,6 +110,15 @@ export async function recognizePassport(
   if (imageRegistration) form.append("image_registration", imageRegistration);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), RECOGNIZE_PASSPORT_TIMEOUT_MS);
+  let wasHiddenDuringRequest = false;
+  const handleVisibilityChange = () => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      wasHiddenDuringRequest = true;
+    }
+  };
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+  }
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/api/v1/passport/recognize`, {
@@ -119,12 +128,33 @@ export async function recognizePassport(
     });
   } catch (e) {
     clearTimeout(timeoutId);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }
     if (e instanceof Error && e.name === "AbortError") {
       throw new Error("Превышено время ожидания. Распознавание заняло слишком долго — попробуйте ещё раз.");
+    }
+    if (
+      e instanceof Error &&
+      wasHiddenDuringRequest &&
+      (e.name === "TypeError" || /load failed|failed to fetch|network/i.test(e.message))
+    ) {
+      throw new Error(
+        "Распознавание прервалось, потому что приложение было свёрнуто или браузер ушёл в фон. Во время сканирования не переключайтесь в другие приложения и дождитесь завершения."
+      );
+    }
+    if (
+      e instanceof Error &&
+      (e.name === "TypeError" || /load failed|failed to fetch|network/i.test(e.message))
+    ) {
+      throw new Error("Не удалось завершить распознавание: проверьте интернет и не сворачивайте приложение во время сканирования.");
     }
     throw e;
   }
   clearTimeout(timeoutId);
+  if (typeof document !== "undefined") {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }
   if (res.status === 503) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || "Сервис распознавания не настроен");
