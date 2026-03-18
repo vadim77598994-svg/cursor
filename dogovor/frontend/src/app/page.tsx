@@ -186,8 +186,10 @@ export default function DogovorPage() {
         {step === 2 && (
           <StepReview
             patient={patient}
-            onChange={setPatient}
-            onNext={() => setStep(3)}
+            onNext={(nextPatient) => {
+              setPatient(nextPatient);
+              setStep(3);
+            }}
           />
         )}
 

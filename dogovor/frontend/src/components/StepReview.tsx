@@ -1,11 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { PatientData } from "@/lib/api";
 
 type StepReviewProps = {
   patient: PatientData;
-  onChange: (patient: PatientData) => void;
-  onNext: () => void;
+  onNext: (patient: PatientData) => void;
 };
 
 const fields: { key: keyof PatientData; label: string; placeholder: string; type?: string }[] = [
@@ -18,12 +18,18 @@ const fields: { key: keyof PatientData; label: string; placeholder: string; type
   { key: "reg_address",        label: "Адрес регистрации",   placeholder: "г. Москва, ул. ..." },
 ];
 
-export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
+export function StepReview({ patient, onNext }: StepReviewProps) {
+  const [draft, setDraft] = useState<PatientData>(patient);
+
+  useEffect(() => {
+    setDraft(patient);
+  }, [patient]);
+
   const update = (key: keyof PatientData, value: string) => {
-    onChange({ ...patient, [key]: value || undefined });
+    setDraft((prev) => ({ ...prev, [key]: value || undefined }));
   };
 
-  const canNext = patient.patient_fio.trim().length > 0;
+  const canNext = draft.patient_fio.trim().length > 0;
 
   return (
     <div className="space-y-7">
@@ -61,7 +67,7 @@ export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
               <input
                 id={key}
                 type={type}
-                value={patient[key] ?? ""}
+                value={draft[key] ?? ""}
                 onChange={(e) => update(key, e.target.value)}
                 placeholder={placeholder}
                 className="block w-full border-none bg-transparent px-[18px] pb-3 pt-1 text-[13px] text-[var(--pye-text)] outline-none placeholder:text-[var(--pye-border)] focus:ring-0"
@@ -74,7 +80,7 @@ export function StepReview({ patient, onChange, onNext }: StepReviewProps) {
       {/* ── Кнопка ────────────────────────────── */}
       <button
         type="button"
-        onClick={onNext}
+        onClick={() => onNext(draft)}
         disabled={!canNext}
         className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18] disabled:cursor-not-allowed disabled:bg-[var(--pye-border)] disabled:text-[var(--pye-muted)]"
       >

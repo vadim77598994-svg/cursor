@@ -17,19 +17,55 @@ export type Staff = {
   signature_image_url: string | null;
 };
 
+let locationsCache: Location[] | null = null;
+let locationsPromise: Promise<Location[]> | null = null;
+const staffCache = new Map<string, Staff[]>();
+const staffPromiseCache = new Map<string, Promise<Staff[]>>();
+
 export async function fetchLocations(): Promise<Location[]> {
-  const res = await fetch(`${API_BASE}/api/v1/locations`);
-  if (!res.ok) throw new Error("Не удалось загрузить список кабинетов");
-  return res.json();
+  if (locationsCache) return locationsCache;
+  if (locationsPromise) return locationsPromise;
+
+  locationsPromise = (async () => {
+    const res = await fetch(`${API_BASE}/api/v1/locations`);
+    if (!res.ok) throw new Error("Не удалось загрузить список кабинетов");
+    const data = (await res.json()) as Location[];
+    locationsCache = data;
+    return data;
+  })();
+
+  try {
+    return await locationsPromise;
+  } finally {
+    locationsPromise = null;
+  }
 }
 
 export async function fetchStaff(city?: string): Promise<Staff[]> {
+  const cacheKey = city?.trim() || "__all__";
+  const cached = staffCache.get(cacheKey);
+  if (cached) return cached;
+  const inflight = staffPromiseCache.get(cacheKey);
+  if (inflight) return inflight;
+
   const url = city
     ? `${API_BASE}/api/v1/staff?city=${encodeURIComponent(city)}`
     : `${API_BASE}/api/v1/staff`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Не удалось загрузить список оптометристов");
-  return res.json();
+
+  const promise = (async () => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Не удалось загрузить список оптометристов");
+    const data = (await res.json()) as Staff[];
+    staffCache.set(cacheKey, data);
+    return data;
+  })();
+
+  staffPromiseCache.set(cacheKey, promise);
+  try {
+    return await promise;
+  } finally {
+    staffPromiseCache.delete(cacheKey);
+  }
 }
 
 export type PatientData = {
