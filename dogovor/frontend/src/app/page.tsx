@@ -1,12 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Image from "next/image";
 import type { Location, Staff, PatientData } from "@/lib/api";
-import { StepCabinet } from "@/components/StepCabinet";
-import { StepScan } from "@/components/StepScan";
-import { StepReview } from "@/components/StepReview";
-import { StepSignature } from "@/components/StepSignature";
 
 const STEPS = ["Кабинет и врач", "Сканирование", "Проверка данных", "Подпись"];
 
@@ -31,6 +28,33 @@ const emptyPatient: PatientData = {
   reg_address: "",
   patient_email: "",
 };
+
+function StepLoading() {
+  return (
+    <div className="flex min-h-[32vh] items-center justify-center">
+      <p className="font-mono text-[11px] uppercase tracking-[.12em] text-[var(--pye-muted)]">
+        Загрузка шага…
+      </p>
+    </div>
+  );
+}
+
+const StepCabinet = dynamic(
+  () => import("@/components/StepCabinet").then((mod) => mod.StepCabinet),
+  { loading: () => <StepLoading /> }
+);
+const StepScan = dynamic(
+  () => import("@/components/StepScan").then((mod) => mod.StepScan),
+  { loading: () => <StepLoading /> }
+);
+const StepReview = dynamic(
+  () => import("@/components/StepReview").then((mod) => mod.StepReview),
+  { loading: () => <StepLoading /> }
+);
+const StepSignature = dynamic(
+  () => import("@/components/StepSignature").then((mod) => mod.StepSignature),
+  { loading: () => <StepLoading /> }
+);
 
 export default function DogovorPage() {
   const [step, setStep] = useState(0);
