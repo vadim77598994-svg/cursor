@@ -288,7 +288,6 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               className="hidden"
               onChange={handleFile}
               disabled={loading}
-              capture="environment"
             />
             {phase === "registration" && (
               <span
