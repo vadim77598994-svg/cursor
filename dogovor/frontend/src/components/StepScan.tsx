@@ -47,6 +47,11 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   const [contractToggleOpen, setContractToggleOpen] = useState(false);
   const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
+  const hasPreviewFile = Boolean(file && previewUrl);
+  const showManualOption = phase === "spread";
+  const showRegistrationOption = phase === "registration" && (!registrationFile || hasPreviewFile);
+  const isRegistrationCardActive = phase === "registration" && !registrationFile && !hasPreviewFile;
+  const isRecognizePrimary = Boolean(registrationFile);
 
   const clearImage = useCallback(() => {
     if (clearTimerRef.current) {
@@ -267,59 +272,86 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
       {/* ── Опции ──────────────────────────────── */}
       <div className="space-y-2">
         {/* Первичная опция — фото */}
-        <label className="group relative block cursor-pointer rounded-md border border-[var(--pye-border)] bg-white px-5 py-5 transition-colors hover:border-[var(--pye-text)]">
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFile}
-            disabled={loading}
-          />
-          <span
-            className={`mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] ${
-              phase === "spread" ? "text-[var(--pye-accent)]" : registrationFile ? "text-emerald-600" : "text-[var(--pye-accent)]"
+        {(phase === "spread" || showRegistrationOption) && (
+          <label
+            className={`group relative block cursor-pointer rounded-md border px-5 py-5 transition-colors ${
+              phase === "spread"
+                ? "border-[var(--pye-text)] bg-[var(--pye-text)]"
+                : isRegistrationCardActive
+                ? "border-[var(--pye-text)] bg-[var(--pye-text)]"
+                : "border-[var(--pye-border)] bg-white hover:border-[var(--pye-text)]"
             }`}
           >
-            {phase === "spread" ? "Рекомендуется" : "Шаг 2"}
-          </span>
-          <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
-            {phase === "spread" ? "Фото разворота" : "Фото прописки"}
-          </span>
-          <span className="mt-1 block font-mono text-[10px] leading-relaxed text-[var(--pye-muted)]">
-            {phase === "spread"
-              ? "Сначала разворот, потом (по желанию) прописка — и распознаём одним запросом"
-              : "Опционально: если есть время — добавьте страницу с адресом регистрации"}
-          </span>
-          <span
-            className="absolute right-5 top-1/2 -translate-y-1/2 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
-            aria-hidden
-          >
-            →
-          </span>
-        </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFile}
+              disabled={loading}
+              capture="environment"
+            />
+            {phase === "registration" && (
+              <span
+                className={`mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] ${
+                  registrationFile ? "text-emerald-600" : isRegistrationCardActive ? "text-white/55" : "text-[var(--pye-accent)]"
+                }`}
+              >
+                Шаг 2
+              </span>
+            )}
+            <span
+              className={`block text-[14px] font-semibold tracking-tight ${
+                phase === "spread" || isRegistrationCardActive ? "text-white" : "text-[var(--pye-text)]"
+              }`}
+            >
+              {phase === "spread" ? "Фото разворота" : "Фото прописки"}
+            </span>
+            <span
+              className={`mt-1 block font-mono text-[10px] leading-relaxed ${
+                phase === "spread" || isRegistrationCardActive ? "text-white/55" : "text-[var(--pye-muted)]"
+              }`}
+            >
+              {phase === "spread"
+                ? "Сначала разворот, потом (по желанию) прописка — и распознаём одним запросом"
+                : "Опционально: если есть время — добавьте страницу с адресом регистрации"}
+            </span>
+            <span
+              className={`absolute right-5 top-1/2 -translate-y-1/2 font-mono transition-colors ${
+                phase === "spread" || isRegistrationCardActive
+                  ? "text-white/55"
+                  : "text-[var(--pye-border)] group-hover:text-[var(--pye-text)]"
+              }`}
+              aria-hidden
+            >
+              →
+            </span>
+          </label>
+        )}
 
         {/* Вторичная опция — вручную */}
-        <button
-          type="button"
-          onClick={handleManual}
-          disabled={loading}
-          className="group flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-5 py-4 text-left transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
-        >
-          <div>
-            <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
-              Ввести вручную
-            </span>
-            <span className="mt-0.5 block font-mono text-[10px] text-[var(--pye-muted)]">
-              Заполнить самостоятельно
-            </span>
-          </div>
-          <span
-            className="ml-4 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
-            aria-hidden
+        {showManualOption && (
+          <button
+            type="button"
+            onClick={handleManual}
+            disabled={loading}
+            className="group flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-5 py-4 text-left transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
           >
-            →
-          </span>
-        </button>
+            <div>
+              <span className="block text-[14px] font-semibold tracking-tight text-[var(--pye-text)]">
+                Ввести вручную
+              </span>
+              <span className="mt-0.5 block font-mono text-[10px] text-[var(--pye-muted)]">
+                Заполнить самостоятельно
+              </span>
+            </div>
+            <span
+              className="ml-4 font-mono text-[var(--pye-border)] transition-colors group-hover:text-[var(--pye-text)]"
+              aria-hidden
+            >
+              →
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ── Предпросмотр фото ──────────────────── */}
@@ -366,9 +398,17 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             type="button"
             onClick={handleRecognize}
             disabled={loading}
-            className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18] disabled:opacity-50"
+            className={`flex min-h-[48px] w-full items-center justify-between rounded-[4px] px-5 py-4 transition-colors disabled:opacity-50 ${
+              isRecognizePrimary
+                ? "bg-[var(--pye-text)] hover:bg-[#1C1C18]"
+                : "border border-[var(--pye-border)] bg-white hover:border-[var(--pye-text)]"
+            }`}
           >
-            <span className="flex-1 text-center text-[13px] font-medium text-white">
+            <span
+              className={`flex-1 text-center text-[13px] font-medium ${
+                isRecognizePrimary ? "text-white" : "text-[var(--pye-text)]"
+              }`}
+            >
               {loading
                 ? progress > 0
                   ? `Распознаём… ${progress}%`
@@ -377,7 +417,14 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
                 ? "Распознать (разворот + прописка)"
                 : "Распознать (только разворот)"}
             </span>
-            {!loading && <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>}
+            {!loading && (
+              <span
+                className={`ml-3 font-mono text-base ${isRecognizePrimary ? "text-white" : "text-[var(--pye-muted)]"}`}
+                aria-hidden
+              >
+                →
+              </span>
+            )}
           </button>
           {!registrationFile && (
             <p className="text-center font-mono text-[10px] text-[var(--pye-muted)]">
