@@ -13,6 +13,11 @@
 - `nginx`
 - позже `certbot`
 
+Если хочешь максимально прямой путь:
+
+- перед клоном проекта смотри [`docs/TIMEWEB_PANEL_WALKTHROUGH.md`](docs/TIMEWEB_PANEL_WALKTHROUGH.md)
+- для env смотри [`docs/TIMEWEB_ENV_CHECKLIST.md`](docs/TIMEWEB_ENV_CHECKLIST.md)
+
 ## 1. Клонировать проект
 
 ```bash
@@ -20,6 +25,12 @@ mkdir -p /var/www
 cd /var/www
 git clone https://github.com/vadim77598994-svg/cursor.git
 cd cursor/dogovor
+```
+
+Если сервер пустой, можно сначала запустить bootstrap:
+
+```bash
+bash deploy/timeweb/bootstrap-server.sh
 ```
 
 ## 2. Подготовить env-файлы
@@ -112,7 +123,7 @@ certbot --nginx -d dogovor.example.com -d api.dogovor.example.com
 ```bash
 cd /var/www/cursor/dogovor
 git pull
-docker compose --env-file .env.timeweb -f docker-compose.timeweb.yml up -d --build
+bash deploy/timeweb/redeploy.sh
 ```
 
 ## 7. Что проверить после переезда
@@ -123,3 +134,9 @@ docker compose --env-file .env.timeweb -f docker-compose.timeweb.yml up -d --bui
 - список кабинетов загружается
 - сканирование паспорта работает
 - PDF приходит на email
+
+Быстрый smoke-check на сервере:
+
+```bash
+bash deploy/timeweb/smoke-check.sh
+```
