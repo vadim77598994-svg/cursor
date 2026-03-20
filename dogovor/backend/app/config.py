@@ -11,6 +11,10 @@ def _parse_cors_origins(value: str) -> list[str]:
 class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
+    # Источник данных для БД и Storage:
+    # - "supabase" (по умолчанию, текущий режим)
+    # - "postgres" (вариант б): Postgres + MinIO на российском сервере
+    data_backend: str = "supabase"
     storage_bucket: str = "contracts"
     # CORS: через запятую. Пусто = только localhost:3000,3001 для разработки
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
@@ -31,6 +35,21 @@ class Settings(BaseSettings):
     beorg_project_id: str = ""
     beorg_token: str = ""
     beorg_machine_uid: str = ""
+
+    # Postgres (data_backend=postgres)
+    postgres_host: str = ""
+    postgres_port: int = 5432
+    postgres_db: str = "dogovor"
+    postgres_user: str = ""
+    postgres_password: str = ""
+
+    # MinIO (data_backend=postgres): S3-совместимое хранилище для PDF и подписей
+    minio_endpoint: str = ""
+    minio_port: int = 9000
+    minio_secure: bool = False
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+    minio_presign_seconds: int = 3600
     # Предобработка фото перед Биорг (ресайз, контраст, резкость). true = включено (по умолчанию для теста).
     preprocess_passport_image: bool = True
 

@@ -7,8 +7,37 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env.production
+    depends_on:
+      - postgres
+      - minio
     ports:
       - "127.0.0.1:8000:8080"
+
+  postgres:
+    image: postgres:16
+    container_name: dogovor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dogovor}
+      POSTGRES_USER: ${POSTGRES_USER:-dogovor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dogovor}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/001_contracts_schema.sql:/docker-entrypoint-initdb.d/001_contracts_schema.sql:ro
+
+  minio:
+    image: minio/minio:latest
+    container_name: dogovor-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
 
   frontend:
     build:
@@ -22,3 +51,7 @@ services:
       - backend
     ports:
       - "127.0.0.1:3000:3000"
+
+volumes:
+  postgres_data:
+  minio_data:
