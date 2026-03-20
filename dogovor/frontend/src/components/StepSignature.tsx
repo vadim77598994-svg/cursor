@@ -167,12 +167,15 @@ export function StepSignature({
   };
 
   const doGenerate = useCallback(
-    async (opts?: { sendEmail?: boolean }): Promise<GenerateContractResult | null> => {
+    async (
+      opts?: { sendEmail?: boolean; setUi?: boolean }
+    ): Promise<GenerateContractResult | null> => {
       if (!hasStroke()) {
         setError("Поставьте подпись в поле выше");
         return null;
       }
       const sendEmail = opts?.sendEmail !== false;
+      const setUi = opts?.setUi !== false;
       setError(null);
       setIsSubmitting(true);
       try {
@@ -182,11 +185,13 @@ export function StepSignature({
           patient: sendEmail ? patient : { ...patient, patient_email: undefined },
           signature_data_url: getSignatureDataUrl() ?? undefined,
         });
-        setDone(result.contract_number);
-        setContractId(result.contract_id ?? null);
-        setPdfPath(result.pdf_path ?? null);
-        setEmailSent(result.email_sent ?? false);
-        setEmailFailReason(result.email_fail_reason ?? null);
+        if (setUi) {
+          setDone(result.contract_number);
+          setContractId(result.contract_id ?? null);
+          setPdfPath(result.pdf_path ?? null);
+          setEmailSent(result.email_sent ?? false);
+          setEmailFailReason(result.email_fail_reason ?? null);
+        }
         return result;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка при создании договора");
@@ -201,7 +206,9 @@ export function StepSignature({
   const handleSubmit = () => doGenerate({ sendEmail: true });
 
   const handleShareClick = async () => {
-    const result = await doGenerate({ sendEmail: false });
+    // Важно: не переключаем UI на success-экран до вызова navigator.share,
+    // чтобы на iOS системное окно могло отобразиться.
+    const result = await doGenerate({ sendEmail: false, setUi: false });
     if (!result?.contract_id) {
       setError("Не удалось сформировать договор для шаринга (нет contract_id)");
       return;
@@ -213,6 +220,12 @@ export function StepSignature({
     if (navShare) {
       try {
         await navShare({ title: `Договор № ${result.contract_number}`, url: pdfUrl });
+        // После того как share-sheet показан/закрыт — переключаем UI.
+        setDone(result.contract_number);
+        setContractId(result.contract_id ?? null);
+        setPdfPath(result.pdf_path ?? null);
+        setEmailSent(result.email_sent ?? false);
+        setEmailFailReason(result.email_fail_reason ?? null);
         return;
       } catch {
         // падаем дальше и попробуем share как файл
@@ -223,6 +236,11 @@ export function StepSignature({
           type: "application/pdf",
         });
         await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
+        setDone(result.contract_number);
+        setContractId(result.contract_id ?? null);
+        setPdfPath(result.pdf_path ?? null);
+        setEmailSent(result.email_sent ?? false);
+        setEmailFailReason(result.email_fail_reason ?? null);
         return;
       } catch (err) {
         // eslint-disable-next-line no-console
