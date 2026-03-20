@@ -293,3 +293,15 @@ export async function fetchContractPdf(contractId: string): Promise<Blob> {
   }
   return res.blob();
 }
+
+/** Пресайнед URL на PDF (для надежного iOS Web Share). */
+export async function fetchContractShareUrl(
+  contractId: string
+): Promise<{ url: string; filename: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/contracts/${contractId}/pdf/share-url`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось получить share URL договора");
+  }
+  return res.json();
+}

@@ -99,6 +99,30 @@ def get_contract_pdf(contract_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/contracts/{contract_id}/pdf/share-url")
+def get_contract_pdf_share_url(contract_id: str):
+    """
+    Возвращает presigned URL на PDF для надежного iOS/Web Share.
+    """
+    try:
+        row = get_contract_pdf_meta(contract_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Contract not found")
+        pdf_path = (row or {}).get("pdf_path")
+        contract_number = (row or {}).get("contract_number") or "contract"
+        if not pdf_path:
+            raise HTTPException(status_code=404, detail="PDF not found for this contract")
+
+        filename = f"dogovor_{contract_number.replace('/', '-')}.pdf"
+        url = get_presigned_url(pdf_path)
+        return {"url": url, "filename": filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("get_contract_pdf_share_url failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def _safe(s: str | None) -> str:
     return (s or "").strip() or "—"
 

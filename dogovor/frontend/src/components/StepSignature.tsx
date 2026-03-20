@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
-import { API_BASE, fetchContractPdf, generateContract, previewContract } from "@/lib/api";
+import { API_BASE, fetchContractPdf, fetchContractShareUrl, generateContract, previewContract } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -215,12 +215,20 @@ export function StepSignature({
     }
     const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
     const rawPdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-    // Web Share API на iOS/мобильных часто ведёт себя иначе в insecure context (http).
-    // Если страница загружается по https — пробуем перевести ссылку в https.
-    const sharePdfUrl =
-      typeof window !== "undefined" && window.location.protocol === "https:"
-        ? rawPdfUrl.replace(/^http:/, "https:")
-        : rawPdfUrl;
+
+    // Сначала пытаемся получить presigned URL из MinIO (лучше для iOS Web Share).
+    let sharePdfUrl = rawPdfUrl;
+    try {
+      const share = await fetchContractShareUrl(result.contract_id);
+      sharePdfUrl = share.url || rawPdfUrl;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("fetchContractShareUrl failed:", e);
+    }
+    // Если страница загружена по https — приводим share URL к https на всякий случай.
+    if (typeof window !== "undefined" && window.location.protocol === "https:" && sharePdfUrl.startsWith("http:")) {
+      sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
+    }
 
     // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
     if (navShare) {
@@ -267,10 +275,17 @@ export function StepSignature({
     try {
       const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
       const rawPdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
-      const sharePdfUrl =
-        typeof window !== "undefined" && window.location.protocol === "https:"
-          ? rawPdfUrl.replace(/^http:/, "https:")
-          : rawPdfUrl;
+      let sharePdfUrl = rawPdfUrl;
+      try {
+        const share = await fetchContractShareUrl(contractId);
+        sharePdfUrl = share.url || rawPdfUrl;
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error("fetchContractShareUrl (success screen) failed:", e);
+      }
+      if (typeof window !== "undefined" && window.location.protocol === "https:" && sharePdfUrl.startsWith("http:")) {
+        sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
+      }
 
       if (!navShare) {
         const mailto = patient.patient_email
