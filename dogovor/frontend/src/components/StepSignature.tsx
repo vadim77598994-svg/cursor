@@ -231,19 +231,9 @@ export function StepSignature({
     // Fallback: если share недоступен (часто на некоторых устройствах/браузерах) — открываем PDF в новой вкладке.
     try {
       const url = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-      const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (!w) {
-        // Браузер мог заблокировать открытие нового окна.
-        // Сфолбэчим на объект URL через blob.
-        const blob = await fetchContractPdf(result.contract_id);
-        const objectUrl = URL.createObjectURL(blob);
-        const w2 = window.open(objectUrl, "_blank", "noopener,noreferrer");
-        if (w2) {
-          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-          return;
-        }
-        URL.revokeObjectURL(objectUrl);
-      }
+      // На iOS/Android `window.open` часто триггерит системный запрет на всплывающие окна.
+      // В fallback открываем PDF в той же вкладке.
+      window.location.href = url;
     } catch {
       setError("Поделиться через системное окно недоступно. Не удалось открыть PDF.");
     }
@@ -260,7 +250,8 @@ export function StepSignature({
         const mailto = patient.patient_email
           ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent("Договор оформлен. PDF приложен к письму с сервера.")}`
           : `mailto:?subject=${encodeURIComponent("Договор № " + done)}`;
-        window.open(mailto);
+        // Без window.open: меньше шансов на системные запросы про всплывающие окна.
+        window.location.href = mailto;
         return;
       }
 
