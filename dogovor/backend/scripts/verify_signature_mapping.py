@@ -14,12 +14,16 @@ import sys
 # добавить корень backend в path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.db import supabase
+from app.db_postgres import get_staff as get_staff_postgres
+from app.storage_minio import get_presigned_url
 
 
 def main():
-    r = supabase.table("dogovor_staff").select("fio, signature_image_url").order("sort_order").execute()
-    rows = r.data or []
+    rows = get_staff_postgres()
+    # signature_image_url хранит object key в MinIO, преобразуем в URL для просмотра
+    for row in rows:
+        key = (row.get("signature_image_url") or "").strip()
+        row["signature_image_url"] = get_presigned_url(key) if key else ""
     if not rows:
         print("В dogovor_staff нет записей.")
         return
@@ -38,7 +42,7 @@ def main():
     print("Если у кого-то подпись не та (например у Карасевой видна подпись Ивченко):")
     print("  1) Проверьте на компе файлы в signatures_to_upload: имя файла = фамилия (Карасева.png = подпись Карасевой).")
     print("  2) Если файл перепутан — переименуйте/замените содержимое и заново запустите загрузку:")
-    print("     .venv/bin/python -m app.services.signature_upload ../signatures_to_upload")
+    print("     .venv/bin/python -m app.services.signature_upload_minio ../signatures_to_upload")
 
 
 if __name__ == "__main__":

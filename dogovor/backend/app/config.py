@@ -9,12 +9,6 @@ def _parse_cors_origins(value: str) -> list[str]:
 
 
 class Settings(BaseSettings):
-    supabase_url: str = ""
-    supabase_service_key: str = ""
-    # Источник данных для БД и Storage:
-    # - "supabase" (по умолчанию, текущий режим)
-    # - "postgres" (вариант б): Postgres + MinIO на российском сервере
-    data_backend: str = "supabase"
     storage_bucket: str = "contracts"
     # CORS: через запятую. Пусто = только localhost:3000,3001 для разработки
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"

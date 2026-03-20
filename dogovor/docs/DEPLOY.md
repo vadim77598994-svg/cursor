@@ -49,7 +49,7 @@
 |-----|--------------------------|
 | `SUPABASE_URL` | Твой URL Supabase, например `https://sojsihvhpvmzzdmqgpri.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | service_role ключ из Supabase (Dashboard → Settings → API → service_role) |
-| `SUPABASE_STORAGE_BUCKET` | `contracts` |
+| `STORAGE_BUCKET` | `contracts` |
 | `CORS_ORIGINS` | Пока оставь пустым или укажи временный URL фронта (см. часть 2). После деплоя фронта замени на итоговый, например `https://dogovor.pyeoptics.com` или `https://твой-проект.vercel.app` |
 | `SMTP_HOST` | `smtp.yandex.ru` |
 | `SMTP_PORT` | `465` |

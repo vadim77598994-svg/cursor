@@ -5,9 +5,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Минимальные env, чтобы app загрузился (без реального Supabase)
-os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
-os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-key")
-
 from app.main import app
 
 client = TestClient(app)

@@ -11,10 +11,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 def main():
     from app.config import settings
-    from app.db import supabase
 
-    r = supabase.table("dogovor_staff").select("id, fio, signature_image_url").execute()
-    rows = r.data or []
+    from app.db_postgres import get_staff as get_staff_postgres
+    from app.storage_minio import get_presigned_url
+
+    rows = get_staff_postgres()
+    # В БД signature_image_url хранит object key в MinIO.
+    # Для проверки URL преобразуем ключ в presigned-URL.
+    for row in rows:
+        key = (row.get("signature_image_url") or "").strip()
+        row["signature_image_url"] = get_presigned_url(key) if key else ""
     if not rows:
         print("В dogovor_staff нет записей.")
         return

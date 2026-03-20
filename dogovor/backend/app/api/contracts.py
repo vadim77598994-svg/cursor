@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
 from app.config import settings
-from app.db import supabase
 from app.models.contracts import GenerateContractRequest
 from app.services.contract_number import get_next_contract_number
 from app.services.email_send import send_contract_pdf
@@ -30,35 +29,14 @@ def preview_contract(body: GenerateContractRequest):
     Возвращает HTML договора со всеми приложениями без подписей (для ознакомления на шаге 4).
     """
     try:
-        if settings.data_backend.strip().lower() == "postgres":
-            loc = get_location_for_preview(body.location_id)
-            if not loc:
-                raise HTTPException(status_code=404, detail="Location not found")
-            cabinet_address = loc["address"]
-            city = loc["city"]
-            staff_row = get_staff_for_preview(body.staff_id)
-            staff_fio = staff_row["fio"] if staff_row else ""
-        else:
-            loc = (
-                supabase.table("dogovor_locations")
-                .select("contract_prefix, address, city")
-                .eq("id", body.location_id)
-                .single()
-                .execute()
-            )
-            if not loc.data:
-                raise HTTPException(status_code=404, detail="Location not found")
-            cabinet_address = loc.data["address"]
-            city = loc.data["city"]
+        loc = get_location_for_preview(body.location_id)
+        if not loc:
+            raise HTTPException(status_code=404, detail="Location not found")
+        cabinet_address = loc["address"]
+        city = loc["city"]
 
-            staff_row = (
-                supabase.table("dogovor_staff")
-                .select("fio")
-                .eq("id", body.staff_id)
-                .single()
-                .execute()
-            )
-            staff_fio = staff_row.data["fio"] if staff_row.data else ""
+        staff_row = get_staff_for_preview(body.staff_id)
+        staff_fio = staff_row["fio"] if staff_row else ""
 
         current_date = datetime.now().strftime("%d.%m.%Y")
         context = {
@@ -95,24 +73,11 @@ def get_contract_pdf(contract_id: str):
     Возвращает подписанный PDF договора по id (для шаринга: «Подписать и поделиться»).
     """
     try:
-        if settings.data_backend.strip().lower() == "postgres":
-            row = get_contract_pdf_meta(contract_id)
-            if not row:
-                raise HTTPException(status_code=404, detail="Contract not found")
-            pdf_path = (row or {}).get("pdf_path")
-            contract_number = (row or {}).get("contract_number") or "contract"
-        else:
-            row = (
-                supabase.table("dogovor_contracts")
-                .select("pdf_path, contract_number")
-                .eq("id", contract_id)
-                .single()
-                .execute()
-            )
-            if not row.data:
-                raise HTTPException(status_code=404, detail="Contract not found")
-            pdf_path = (row.data or {}).get("pdf_path")
-            contract_number = (row.data or {}).get("contract_number") or "contract"
+        row = get_contract_pdf_meta(contract_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Contract not found")
+        pdf_path = (row or {}).get("pdf_path")
+        contract_number = (row or {}).get("contract_number") or "contract"
         if not pdf_path:
             raise HTTPException(status_code=404, detail="PDF not found for this contract")
         pdf_bytes = download_contract_pdf(pdf_path)
@@ -143,43 +108,17 @@ def generate_contract(body: GenerateContractRequest):
     Получить номер договора, сгенерировать PDF из шаблона, загрузить в Storage, сохранить метаданные в БД.
     """
     try:
-        if settings.data_backend.strip().lower() == "postgres":
-            loc = get_location_for_preview(body.location_id)
-            if not loc:
-                raise HTTPException(status_code=404, detail="Location not found")
-            prefix = loc["contract_prefix"]
-            cabinet_address = loc["address"]
-            city = loc["city"]
+        loc = get_location_for_preview(body.location_id)
+        if not loc:
+            raise HTTPException(status_code=404, detail="Location not found")
+        prefix = loc["contract_prefix"]
+        cabinet_address = loc["address"]
+        city = loc["city"]
 
-            staff_row = get_staff_for_preview(body.staff_id)
-            staff_fio = staff_row["fio"] if staff_row else ""
-            signature_image_key = (staff_row or {}).get("signature_image_url") or ""
-            staff_signature_url = (
-                get_presigned_url(signature_image_key) if signature_image_key else ""
-            )
-        else:
-            loc = (
-                supabase.table("dogovor_locations")
-                .select("contract_prefix, address, city")
-                .eq("id", body.location_id)
-                .single()
-                .execute()
-            )
-            if not loc.data:
-                raise HTTPException(status_code=404, detail="Location not found")
-            prefix = loc.data["contract_prefix"]
-            cabinet_address = loc.data["address"]
-            city = loc.data["city"]
-
-            staff_row = (
-                supabase.table("dogovor_staff")
-                .select("fio, signature_image_url")
-                .eq("id", body.staff_id)
-                .single()
-                .execute()
-            )
-            staff_fio = staff_row.data["fio"] if staff_row.data else ""
-            staff_signature_url = (staff_row.data or {}).get("signature_image_url") or ""
+        staff_row = get_staff_for_preview(body.staff_id)
+        staff_fio = staff_row["fio"] if staff_row else ""
+        signature_image_key = (staff_row or {}).get("signature_image_url") or ""
+        staff_signature_url = get_presigned_url(signature_image_key) if signature_image_key else ""
         staff_signature_data_url = None
         if staff_signature_url:
             staff_signature_data_url = fetch_and_resize_signature(staff_signature_url)
@@ -216,29 +155,14 @@ def generate_contract(body: GenerateContractRequest):
             if not pdf_path:
                 logger.warning("Storage upload failed for %s", contract_number)
 
-        if settings.data_backend.strip().lower() == "postgres":
-            contract_id = insert_contract(
-                contract_number=contract_number,
-                location_id=body.location_id,
-                staff_id=body.staff_id,
-                patient_fio=body.patient.patient_fio,
-                pdf_path=pdf_path,
-                device_uuid=body.device_uuid,
-            )
-        else:
-            row = {
-                "contract_number": contract_number,
-                "location_id": body.location_id,
-                "staff_id": body.staff_id,
-                "patient_fio": body.patient.patient_fio,
-                "pdf_path": pdf_path,
-                "device_uuid": body.device_uuid,
-            }
-            insert_result = supabase.table("dogovor_contracts").insert(row).execute()
-            inserted = (insert_result.data or [{}])[0] if isinstance(insert_result.data, list) else (
-                insert_result.data or {}
-            )
-            contract_id = inserted.get("id") if isinstance(inserted, dict) else None
+        contract_id = insert_contract(
+            contract_number=contract_number,
+            location_id=body.location_id,
+            staff_id=body.staff_id,
+            patient_fio=body.patient.patient_fio,
+            pdf_path=pdf_path,
+            device_uuid=body.device_uuid,
+        )
         logger.info("Contract row inserted: %s (id=%s)", contract_number, contract_id)
 
         email_sent = False

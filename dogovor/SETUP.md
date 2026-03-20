@@ -153,14 +153,14 @@ SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJhbGc...
 
 # Bucket для PDF договоров (создать в Supabase Storage)
-SUPABASE_STORAGE_BUCKET=contracts
+STORAGE_BUCKET=contracts
 ```
 
 Замените значения на свои:
 
 - **SUPABASE_URL** — вставьте скопированный Project URL из Supabase (без слэша в конце).
 - **SUPABASE_SERVICE_KEY** — вставьте скопированный **service_role** ключ целиком, без пробелов и кавычек.
-- **SUPABASE_STORAGE_BUCKET** — оставьте `contracts`, если bucket создали с таким именем; иначе укажите имя вашего bucket.
+- **STORAGE_BUCKET** — оставьте `contracts`, если bucket создали с таким именем; иначе укажите имя вашего bucket.
 
 Сохраните файл. Файл `.env` не должен попадать в git (как правило, он уже в `.gitignore`).
 
@@ -317,7 +317,7 @@ NEXT_PUBLIC_DOGOVOR_API_URL=http://localhost:8000
 |--------|----------------|
 | На шаге «Кабинет и врач» пишет, что не удалось загрузить список кабинетов | Бэкенд запущен на порту 8000? Откройте http://localhost:8000/api/v1/locations в браузере — должен вернуться JSON с массивом. Если нет — проверьте `.env` бэкенда (URL и **service_role** ключ) и что SQL из `001_contracts_schema.sql` выполнен. |
 | При запуске бэкенда ошибка `SUPABASE_URL and SUPABASE_SERVICE_KEY must be set` | Файл `.env` лежит в `dogovor/backend`. В нём есть строки `SUPABASE_URL=...` и `SUPABASE_SERVICE_KEY=...` без лишних пробелов и кавычек вокруг значения. |
-| Договор создаётся, но «PDF не сгенерирован» / в Storage нет файла | Создан ли bucket **contracts** в Supabase → Storage? Имя в `.env` (`SUPABASE_STORAGE_BUCKET`) совпадает с именем bucket? Используется ли именно **service_role** ключ (не anon)? |
+| Договор создаётся, но «PDF не сгенерирован» / в Storage нет файла | Создан ли bucket **contracts** в Supabase → Storage? Имя в `.env` (`STORAGE_BUCKET`) совпадает с именем bucket? Используется ли именно **service_role** ключ (не anon)? |
 | Ошибка CORS при запросе с фронта к бэкенду | В коде бэкенда уже настроен CORS для `http://localhost:3001`. Если фронт открыт с другого origin (например другой порт) — добавьте его в `allow_origins` в `app/main.py`. |
 | `pip: command not found` | Используйте `python3 -m pip install -r requirements.txt` (macOS/Linux) или `py -m pip install -r requirements.txt` (Windows). |
 | Порт 8000 занят (`Address already in use`) | Бэкенд уже запущен — можно просто открыть http://localhost:3001. Либо освободить порт: `lsof -ti:8000 | xargs kill -9`, затем снова `./run.sh`. |
