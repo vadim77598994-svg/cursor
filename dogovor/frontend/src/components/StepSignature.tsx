@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
-import { fetchContractPdf, generateContract, previewContract } from "@/lib/api";
+import { API_BASE, fetchContractPdf, generateContract, previewContract } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -206,17 +206,41 @@ export function StepSignature({
       setError("Не удалось сформировать договор для шаринга (нет contract_id)");
       return;
     }
-    if (!canShare) return; // сделаем переход на экран успеха; дальше пользователь может отправить по email
-    try {
-      const blob = await fetchContractPdf(result.contract_id);
-      const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
-        type: "application/pdf",
-      });
-      await navigator.share({ title: `Договор № ${result.contract_number}`, files: [file] });
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        setError((err as Error).message || "Не удалось загрузить или отправить PDF");
+    // Если Web Share API доступен — используем системное окно.
+    if (canShare) {
+      try {
+        const blob = await fetchContractPdf(result.contract_id);
+        const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
+          type: "application/pdf",
+        });
+        await navigator.share({ title: `Договор № ${result.contract_number}`, files: [file] });
+        return;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("navigator.share failed:", err);
+        setError((err as Error)?.message || "Не удалось открыть системное окно поделиться");
+        return;
       }
+    }
+
+    // Fallback: если share недоступен (часто на некоторых устройствах/браузерах) — открываем PDF в новой вкладке.
+    try {
+      const url = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) {
+        // Браузер мог заблокировать открытие нового окна.
+        // Сфолбэчим на объект URL через blob.
+        const blob = await fetchContractPdf(result.contract_id);
+        const objectUrl = URL.createObjectURL(blob);
+        const w2 = window.open(objectUrl, "_blank", "noopener,noreferrer");
+        if (w2) {
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+          return;
+        }
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch {
+      setError("Поделиться через системное окно недоступно. Не удалось открыть PDF.");
     }
   };
 
