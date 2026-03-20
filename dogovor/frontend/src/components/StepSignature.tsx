@@ -206,14 +206,19 @@ export function StepSignature({
       setError("Не удалось сформировать договор для шаринга (нет contract_id)");
       return;
     }
-    // Если Web Share API доступен — используем системное окно.
-    if (canShare) {
+    // Важно: пробуем share через runtime-проверку, а не через canShare state.
+    // На iOS/Android иногда navigator.share бывает не сразу, а window.open вызывает запросы на всплывающие окна.
+    const navShare = typeof navigator !== "undefined" && typeof (navigator as any).share === "function"
+      ? (navigator as any).share
+      : null;
+
+    if (navShare) {
       try {
         const blob = await fetchContractPdf(result.contract_id);
         const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
           type: "application/pdf",
         });
-        await navigator.share({ title: `Договор № ${result.contract_number}`, files: [file] });
+        await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
         return;
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -246,21 +251,26 @@ export function StepSignature({
 
   const handleShare = useCallback(async () => {
     if (!contractId || !done) return;
-    if (!canShare) {
-      const mailto = patient.patient_email
-        ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent("Договор оформлен. PDF приложен к письму с сервера.")}`
-        : `mailto:?subject=${encodeURIComponent("Договор № " + done)}`;
-      window.open(mailto);
-      return;
-    }
     try {
+      const navShare = typeof navigator !== "undefined" && typeof (navigator as any).share === "function"
+        ? (navigator as any).share
+        : null;
+
+      if (!navShare) {
+        const mailto = patient.patient_email
+          ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent("Договор оформлен. PDF приложен к письму с сервера.")}`
+          : `mailto:?subject=${encodeURIComponent("Договор № " + done)}`;
+        window.open(mailto);
+        return;
+      }
+
       const blob = await fetchContractPdf(contractId);
       const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
-      await navigator.share({ title: `Договор № ${done}`, files: [file] });
+      await navShare({ title: `Договор № ${done}`, files: [file] });
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
     }
-  }, [contractId, done, canShare, patient.patient_email]);
+  }, [contractId, done, patient.patient_email]);
 
   // ── УСПЕХ ───────────────────────────────────────────────
   if (done) {
