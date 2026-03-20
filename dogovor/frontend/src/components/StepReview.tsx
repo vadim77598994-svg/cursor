@@ -46,12 +46,6 @@ export function StepReview({ patient, onNext }: StepReviewProps) {
 
       {/* ── Поля ──────────────────────────────── */}
       <div className="relative">
-        {/* Corner marks */}
-        <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-
         <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white">
           {fields.map(({ key, label, placeholder, type = "text" }, index) => (
             <div

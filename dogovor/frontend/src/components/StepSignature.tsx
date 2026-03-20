@@ -240,10 +240,6 @@ export function StepSignature({
       <div className="space-y-4">
         {/* Главная карточка успеха */}
         <div className="relative">
-          <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
           <div className="rounded-md border border-[var(--pye-border)] bg-white px-6 py-7 text-center">
             <p className="mb-3 font-mono text-[9px] uppercase tracking-[.16em] text-[var(--pye-accent)]">
               Договор оформлен
@@ -378,11 +374,6 @@ export function StepSignature({
 
       {/* Канвас подписи */}
       <div className="relative">
-        <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-        <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-
         <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white">
           {/* Подпись лейбл */}
           <div className="flex items-center justify-between border-b border-[var(--pye-border)] px-[18px] py-2.5">
@@ -418,10 +409,6 @@ export function StepSignature({
       {/* Email поле */}
       {onPatientChange && (
         <div className="relative">
-          <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-          <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
           <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white focus-within:border-[var(--pye-text)]">
             <label
               htmlFor="patient-email"

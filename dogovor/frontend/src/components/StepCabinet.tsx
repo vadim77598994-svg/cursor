@@ -8,16 +8,10 @@ type StepCabinetProps = {
   onNext: (location: Location, staff: Staff) => void;
 };
 
-// Corner marks decoration (nothing.tech style)
 function CornerMarks({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative">
-      <span className="pointer-events-none absolute -left-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-      <span className="pointer-events-none absolute -right-[3px] -top-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-      <span className="pointer-events-none absolute -bottom-[3px] -left-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-      <span className="pointer-events-none absolute -bottom-[3px] -right-[3px] z-10 font-mono text-[9px] leading-none text-[#CACAC3]" aria-hidden>+</span>
-      {children}
-    </div>
+    // Wrapper для блоков выбора: рамка/контент, без декоративных “плюсиков”.
+    <div className="relative">{children}</div>
   );
 }
 
