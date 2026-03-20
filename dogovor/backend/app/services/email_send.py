@@ -9,6 +9,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
+from email.header import Header
+from email.utils import formataddr
 
 logger = logging.getLogger(__name__)
 
@@ -98,10 +100,16 @@ def _send_via_smtp(
     """Отправка через SMTP (Яндекс и др., для Timeweb). Возвращает (успех, текст ошибки или None)."""
     from app.config import settings
 
+    # Yandex может отклонять отправителя, если в MAIL FROM есть пробелы/переносы.
+    from_addr = (from_addr or "").strip()
+    to_email = (to_email or "").strip()
+
     if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
         return False, "SMTP не настроен: задайте SMTP_HOST, SMTP_USER, SMTP_PASSWORD."
     msg = MIMEMultipart()
-    msg["From"] = f"{from_name} <{from_addr}>"
+    # Корректно кодируем не-ASCII имя в заголовке From (иначе некоторые SMTP-сервера могут
+    # неверно распарсить sender address).
+    msg["From"] = formataddr((str(Header(from_name, "utf-8")), from_addr))
     msg["To"] = to_email
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -156,5 +164,5 @@ def send_contract_pdf(
         from_name_resend = (settings.resend_from_name or from_name).strip()
         return _send_via_resend(to_email, subject, body, from_email, from_name_resend, pdf_bytes, pdf_filename)
 
-    from_addr = settings.smtp_from_email or settings.smtp_user
+    from_addr = (settings.smtp_from_email or settings.smtp_user or "").strip()
     return _send_via_smtp(to_email, subject, body, from_addr or "", from_name, pdf_bytes, pdf_filename)
