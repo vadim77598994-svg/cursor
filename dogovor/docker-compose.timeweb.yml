@@ -10,6 +10,9 @@ services:
     depends_on:
       - postgres
       - minio
+    volumes:
+      # Чтобы можно было загружать подписи в MinIO из скрипта (signature_upload_minio)
+      - ./signatures_to_upload:/app/signatures_to_upload:ro
     ports:
       - "127.0.0.1:8000:8080"
 
