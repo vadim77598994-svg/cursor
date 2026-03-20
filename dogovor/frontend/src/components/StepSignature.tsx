@@ -206,11 +206,17 @@ export function StepSignature({
       setError("Не удалось сформировать договор для шаринга (нет contract_id)");
       return;
     }
-    // Важно: пробуем share через runtime-проверку, а не через canShare state.
-    // На iOS/Android иногда navigator.share бывает не сразу, а window.open вызывает запросы на всплывающие окна.
     const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
+    const pdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
 
+    // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
     if (navShare) {
+      try {
+        await navShare({ title: `Договор № ${result.contract_number}`, url: pdfUrl });
+        return;
+      } catch {
+        // падаем дальше и попробуем share как файл
+      }
       try {
         const blob = await fetchContractPdf(result.contract_id);
         const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
@@ -219,26 +225,14 @@ export function StepSignature({
         await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
         return;
       } catch (err) {
-        // Если share с файлами недоступен, пробуем поделиться ссылкой на PDF.
-        try {
-          const url = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-          await navShare({ title: `Договор № ${result.contract_number}`, url });
-          return;
-        } catch {
-          // eslint-disable-next-line no-console
-          console.error("navigator.share failed:", err);
-          setError((err as Error)?.message || "Не удалось открыть системное окно поделиться");
-          return;
-        }
+        // eslint-disable-next-line no-console
+        console.error("navigator.share failed:", err);
       }
     }
 
-    // Fallback: если share недоступен (часто на некоторых устройствах/браузерах) — открываем PDF в новой вкладке.
+    // Fallback: если share недоступен — открываем PDF в той же вкладке.
     try {
-      const url = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-      // На iOS/Android `window.open` часто триггерит системный запрет на всплывающие окна.
-      // В fallback открываем PDF в той же вкладке.
-      window.location.href = url;
+      window.location.href = pdfUrl;
     } catch {
       setError("Поделиться через системное окно недоступно. Не удалось открыть PDF.");
     }
@@ -248,6 +242,7 @@ export function StepSignature({
     if (!contractId || !done) return;
     try {
       const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
+      const pdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
 
       if (!navShare) {
         const mailto = patient.patient_email
@@ -259,13 +254,19 @@ export function StepSignature({
       }
 
       try {
-        const blob = await fetchContractPdf(contractId);
-        const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
-        await navShare({ title: `Договор № ${done}`, files: [file] });
+        // 1) URL-first: надежнее для share-sheet
+        await navShare({ title: `Договор № ${done}`, url: pdfUrl });
       } catch (err) {
-        // Если файлы не поддерживаются — даём ссылку на PDF.
-        const url = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
-        await navShare({ title: `Договор № ${done}`, url });
+        // 2) Попробуем share как файл (если URL-first не сработал)
+        try {
+          const blob = await fetchContractPdf(contractId);
+          const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
+          await navShare({ title: `Договор № ${done}`, files: [file] });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error("navigator.share files failed:", e);
+          window.location.href = pdfUrl;
+        }
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
