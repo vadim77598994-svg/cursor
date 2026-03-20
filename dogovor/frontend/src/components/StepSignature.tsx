@@ -214,12 +214,18 @@ export function StepSignature({
       return;
     }
     const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
-    const pdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
+    const rawPdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
+    // Web Share API на iOS/мобильных часто ведёт себя иначе в insecure context (http).
+    // Если страница загружается по https — пробуем перевести ссылку в https.
+    const sharePdfUrl =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? rawPdfUrl.replace(/^http:/, "https:")
+        : rawPdfUrl;
 
     // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
     if (navShare) {
       try {
-        await navShare({ title: `Договор № ${result.contract_number}`, url: pdfUrl });
+        await navShare({ title: `Договор № ${result.contract_number}`, url: sharePdfUrl });
         // После того как share-sheet показан/закрыт — переключаем UI.
         setDone(result.contract_number);
         setContractId(result.contract_id ?? null);
@@ -250,7 +256,7 @@ export function StepSignature({
 
     // Fallback: если share недоступен — открываем PDF в той же вкладке.
     try {
-      window.location.href = pdfUrl;
+      window.location.href = rawPdfUrl;
     } catch {
       setError("Поделиться через системное окно недоступно. Не удалось открыть PDF.");
     }
@@ -260,7 +266,11 @@ export function StepSignature({
     if (!contractId || !done) return;
     try {
       const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
-      const pdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
+      const rawPdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
+      const sharePdfUrl =
+        typeof window !== "undefined" && window.location.protocol === "https:"
+          ? rawPdfUrl.replace(/^http:/, "https:")
+          : rawPdfUrl;
 
       if (!navShare) {
         const mailto = patient.patient_email
@@ -273,7 +283,7 @@ export function StepSignature({
 
       try {
         // 1) URL-first: надежнее для share-sheet
-        await navShare({ title: `Договор № ${done}`, url: pdfUrl });
+        await navShare({ title: `Договор № ${done}`, url: sharePdfUrl });
       } catch (err) {
         // 2) Попробуем share как файл (если URL-first не сработал)
         try {
@@ -283,7 +293,7 @@ export function StepSignature({
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error("navigator.share files failed:", e);
-          window.location.href = pdfUrl;
+          window.location.href = rawPdfUrl;
         }
       }
     } catch (err) {
