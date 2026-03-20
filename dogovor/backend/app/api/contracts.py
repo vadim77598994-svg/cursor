@@ -88,7 +88,8 @@ def get_contract_pdf(contract_id: str):
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f'inline; filename="{filename}"',
+                # iOS-шеринг часто лучше работает, когда PDF воспринимается как "файл для скачивания/прикрепления".
+                "Content-Disposition": f'attachment; filename="{filename}"',
             },
         )
     except HTTPException:
