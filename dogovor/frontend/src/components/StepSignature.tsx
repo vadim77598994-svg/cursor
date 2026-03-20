@@ -208,9 +208,7 @@ export function StepSignature({
     }
     // Важно: пробуем share через runtime-проверку, а не через canShare state.
     // На iOS/Android иногда navigator.share бывает не сразу, а window.open вызывает запросы на всплывающие окна.
-    const navShare = typeof navigator !== "undefined" && typeof (navigator as any).share === "function"
-      ? (navigator as any).share
-      : null;
+    const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
 
     if (navShare) {
       try {
@@ -221,10 +219,17 @@ export function StepSignature({
         await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
         return;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("navigator.share failed:", err);
-        setError((err as Error)?.message || "Не удалось открыть системное окно поделиться");
-        return;
+        // Если share с файлами недоступен, пробуем поделиться ссылкой на PDF.
+        try {
+          const url = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
+          await navShare({ title: `Договор № ${result.contract_number}`, url });
+          return;
+        } catch {
+          // eslint-disable-next-line no-console
+          console.error("navigator.share failed:", err);
+          setError((err as Error)?.message || "Не удалось открыть системное окно поделиться");
+          return;
+        }
       }
     }
 
@@ -242,9 +247,7 @@ export function StepSignature({
   const handleShare = useCallback(async () => {
     if (!contractId || !done) return;
     try {
-      const navShare = typeof navigator !== "undefined" && typeof (navigator as any).share === "function"
-        ? (navigator as any).share
-        : null;
+      const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
 
       if (!navShare) {
         const mailto = patient.patient_email
@@ -255,9 +258,15 @@ export function StepSignature({
         return;
       }
 
-      const blob = await fetchContractPdf(contractId);
-      const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
-      await navShare({ title: `Договор № ${done}`, files: [file] });
+      try {
+        const blob = await fetchContractPdf(contractId);
+        const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
+        await navShare({ title: `Договор № ${done}`, files: [file] });
+      } catch (err) {
+        // Если файлы не поддерживаются — даём ссылку на PDF.
+        const url = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
+        await navShare({ title: `Договор № ${done}`, url });
+      }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
     }
