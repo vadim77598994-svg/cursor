@@ -202,7 +202,11 @@ export function StepSignature({
 
   const handleShareClick = async () => {
     const result = await doGenerate({ sendEmail: false });
-    if (!result?.contract_id || !canShare) return;
+    if (!result?.contract_id) {
+      setError("Не удалось сформировать договор для шаринга (нет contract_id)");
+      return;
+    }
+    if (!canShare) return; // сделаем переход на экран успеха; дальше пользователь может отправить по email
     try {
       const blob = await fetchContractPdf(result.contract_id);
       const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
@@ -442,19 +446,17 @@ export function StepSignature({
           {!isSubmitting && <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>}
         </button>
 
-        {canShare && (
-          <button
-            type="button"
-            onClick={handleShareClick}
-            disabled={isSubmitting}
-            className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
-          >
-            <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
-              Подписать и поделиться
-            </span>
-            <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleShareClick}
+          disabled={isSubmitting}
+          className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
+        >
+          <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
+            Подписать и поделиться
+          </span>
+          <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
+        </button>
       </div>
 
       {/* Лоадер */}
