@@ -7,6 +7,7 @@ import base64
 import io
 import logging
 import urllib.request
+import time
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,11 @@ except ImportError:
 STAFF_SIGNATURE_DISPLAY_HEIGHT_PX = 42
 STAFF_SIGNATURE_EMBED_HEIGHT_PX = 336  # 8× — высокое разрешение без пикселизации
 
+# Кеш результата ресайза подписи, чтобы ускорять генерацию договора.
+# Подписи оптометристов статичны, поэтому повторно ресайзить их каждый раз не нужно.
+_SIG_RESIZE_CACHE: dict[str, tuple[str, float]] = {}
+_SIG_RESIZE_CACHE_TTL_SEC = 60 * 60  # 1 час
+
 
 def fetch_and_resize_signature(
     image_url: str,
@@ -38,6 +44,13 @@ def fetch_and_resize_signature(
         return None
     if not _HAS_PIL:
         return None
+
+    # Быстрый возврат из кеша.
+    cached = _SIG_RESIZE_CACHE.get(image_url)
+    if cached:
+        data_url, ts = cached
+        if time.time() - ts < _SIG_RESIZE_CACHE_TTL_SEC:
+            return data_url
     try:
         req = urllib.request.Request(image_url, headers={"User-Agent": "PyeOptics-Contract/1.0"})
         with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
@@ -74,4 +87,6 @@ def fetch_and_resize_signature(
     img.save(buf, format="PNG", optimize=False, compress_level=3)
     buf.seek(0)
     b64 = base64.standard_b64encode(buf.read()).decode("ascii")
-    return f"data:image/png;base64,{b64}"
+    data_url = f"data:image/png;base64,{b64}"
+    _SIG_RESIZE_CACHE[image_url] = (data_url, time.time())
+    return data_url
