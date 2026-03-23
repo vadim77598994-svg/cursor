@@ -43,6 +43,7 @@ export function StepSignature({
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [openPdfUrl, setOpenPdfUrl] = useState<string | null>(null);
+  const [shareDebug, setShareDebug] = useState<string | null>(null);
 
   useEffect(() => {
     setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
@@ -309,6 +310,46 @@ export function StepSignature({
     }
   }, [shareFallbackUrl]);
 
+  const handleShareDebugTest = useCallback(async () => {
+    try {
+      const hasNavigator = typeof navigator !== "undefined";
+      const navShare = hasNavigator ? (navigator as any).share : null;
+      const navCanShare = hasNavigator ? (navigator as any).canShare : null;
+      const secure = typeof window !== "undefined" ? window.isSecureContext : false;
+      const canShareText =
+        typeof navCanShare === "function"
+          ? (() => {
+              try {
+                return !!navCanShare({ text: "test" });
+              } catch {
+                return false;
+              }
+            })()
+          : false;
+
+      if (!navShare) {
+        setShareDebug(
+          `share отсутствует (secure=${String(secure)}, canShare=${String(
+            typeof navCanShare === "function"
+          )}, canShareText=${String(canShareText)})`
+        );
+        return;
+      }
+
+      await navShare({ text: "Тест системного шаринга PYE" });
+      setShareDebug(
+        `share OK (secure=${String(secure)}, canShare=${String(
+          typeof navCanShare === "function"
+        )}, canShareText=${String(canShareText)})`
+      );
+    } catch (e) {
+      const err = e as Error & { name?: string };
+      setShareDebug(
+        `share error: ${err?.name || "UnknownError"} (${err?.message || "no message"})`
+      );
+    }
+  }, []);
+
   // ── УСПЕХ ───────────────────────────────────────────────
   if (done) {
     return (
@@ -376,6 +417,20 @@ export function StepSignature({
         <p className="pt-1 font-mono text-[10px] text-[var(--pye-muted)]">
           {canShare ? "Нажмите кнопку выше, чтобы открыть системное окно поделиться." : "Если системное окно поделиться недоступно — используйте email."}
         </p>
+
+        <button
+          type="button"
+          onClick={handleShareDebugTest}
+          className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-2 text-[12px] text-[var(--pye-muted)] transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span>Тест системного шаринга (диагностика)</span>
+          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
+        </button>
+        {shareDebug && (
+          <div className="rounded-md border border-[var(--pye-border)] bg-white px-3 py-2 font-mono text-[10px] text-[var(--pye-muted)]">
+            {shareDebug}
+          </div>
+        )}
 
         {shareFallbackUrl && (
           <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
