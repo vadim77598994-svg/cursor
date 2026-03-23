@@ -88,8 +88,9 @@ def get_contract_pdf(contract_id: str):
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                # iOS-шеринг часто лучше работает, когда PDF воспринимается как "файл для скачивания/прикрепления".
-                "Content-Disposition": f'attachment; filename="{filename}"',
+                # Открываем PDF inline, чтобы в браузере/просмотрщике была кнопка "поделиться".
+                # Если Web Share недоступен — это самый универсальный UX: пользователь делится из viewer'а.
+                "Content-Disposition": f'inline; filename="{filename}"',
             },
         )
     except HTTPException:

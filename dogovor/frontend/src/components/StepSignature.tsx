@@ -42,6 +42,7 @@ export function StepSignature({
   const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [openPdfUrl, setOpenPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
@@ -238,11 +239,24 @@ export function StepSignature({
       setPdfPath(result.pdf_path ?? null);
       setEmailSent(result.email_sent ?? false);
       setEmailFailReason(result.email_fail_reason ?? null);
+      setOpenPdfUrl(rawPdfUrl);
     };
 
     // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
     if (navShare) {
       try {
+        const canShareUrl =
+          typeof navigator !== "undefined" && typeof (navigator as any).canShare === "function"
+            ? (navigator as any).canShare({ url: sharePdfUrl })
+            : true;
+
+        if (!canShareUrl) {
+          applySuccessUi();
+          setShareFallbackUrl(sharePdfUrl);
+          setShareCopied(false);
+          return;
+        }
+
         await navShare({ title: `Договор № ${result.contract_number}`, url: sharePdfUrl });
         // После того как share-sheet показан/закрыт — переключаем UI.
         applySuccessUi();
@@ -294,12 +308,25 @@ export function StepSignature({
       if (!navShare) {
         setShareFallbackUrl(sharePdfUrl);
         setShareCopied(false);
+        setOpenPdfUrl(rawPdfUrl);
         return;
       }
 
       try {
         // 1) URL-first: надежнее для share-sheet
+        const canShareUrl =
+          typeof navigator !== "undefined" && typeof (navigator as any).canShare === "function"
+            ? (navigator as any).canShare({ url: sharePdfUrl })
+            : true;
+        if (!canShareUrl) {
+          setShareFallbackUrl(sharePdfUrl);
+          setShareCopied(false);
+          setOpenPdfUrl(rawPdfUrl);
+          return;
+        }
+
         await navShare({ title: `Договор № ${done}`, url: sharePdfUrl });
+        setOpenPdfUrl(rawPdfUrl);
       } catch (err) {
         // 2) Попробуем share как файл (если URL-first не сработал)
         try {
@@ -311,6 +338,7 @@ export function StepSignature({
           console.error("navigator.share files failed:", e);
           setShareFallbackUrl(sharePdfUrl);
           setShareCopied(false);
+          setOpenPdfUrl(rawPdfUrl);
         }
       }
     } catch (err) {
@@ -438,7 +466,7 @@ export function StepSignature({
             <button
               type="button"
               onClick={() => {
-                window.location.href = shareFallbackUrl;
+                window.location.href = openPdfUrl || shareFallbackUrl;
               }}
               className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
