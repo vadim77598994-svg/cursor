@@ -40,6 +40,8 @@ export function StepSignature({
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
+  const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     setCanShare(typeof window !== "undefined" && typeof navigator !== "undefined" && !!navigator.share);
@@ -230,16 +232,22 @@ export function StepSignature({
       sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
     }
 
+    const applySuccessUi = () => {
+      setDone(result.contract_number);
+      setContractId(result.contract_id ?? null);
+      setPdfPath(result.pdf_path ?? null);
+      setEmailSent(result.email_sent ?? false);
+      setEmailFailReason(result.email_fail_reason ?? null);
+    };
+
     // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
     if (navShare) {
       try {
         await navShare({ title: `Договор № ${result.contract_number}`, url: sharePdfUrl });
         // После того как share-sheet показан/закрыт — переключаем UI.
-        setDone(result.contract_number);
-        setContractId(result.contract_id ?? null);
-        setPdfPath(result.pdf_path ?? null);
-        setEmailSent(result.email_sent ?? false);
-        setEmailFailReason(result.email_fail_reason ?? null);
+        applySuccessUi();
+        setShareFallbackUrl(null);
+        setShareCopied(false);
         return;
       } catch {
         // падаем дальше и попробуем share как файл
@@ -250,11 +258,9 @@ export function StepSignature({
           type: "application/pdf",
         });
         await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
-        setDone(result.contract_number);
-        setContractId(result.contract_id ?? null);
-        setPdfPath(result.pdf_path ?? null);
-        setEmailSent(result.email_sent ?? false);
-        setEmailFailReason(result.email_fail_reason ?? null);
+        applySuccessUi();
+        setShareFallbackUrl(null);
+        setShareCopied(false);
         return;
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -262,12 +268,10 @@ export function StepSignature({
       }
     }
 
-    // Fallback: если share недоступен — открываем PDF в той же вкладке.
-    try {
-      window.location.href = rawPdfUrl;
-    } catch {
-      setError("Поделиться через системное окно недоступно. Не удалось открыть PDF.");
-    }
+    // Универсальный fallback: не уводим пользователя в скачивание автоматически.
+    applySuccessUi();
+    setShareFallbackUrl(sharePdfUrl);
+    setShareCopied(false);
   };
 
   const handleShare = useCallback(async () => {
@@ -288,11 +292,8 @@ export function StepSignature({
       }
 
       if (!navShare) {
-        const mailto = patient.patient_email
-          ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent("Договор оформлен. PDF приложен к письму с сервера.")}`
-          : `mailto:?subject=${encodeURIComponent("Договор № " + done)}`;
-        // Без window.open: меньше шансов на системные запросы про всплывающие окна.
-        window.location.href = mailto;
+        setShareFallbackUrl(sharePdfUrl);
+        setShareCopied(false);
         return;
       }
 
@@ -308,13 +309,41 @@ export function StepSignature({
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error("navigator.share files failed:", e);
-          window.location.href = rawPdfUrl;
+          setShareFallbackUrl(sharePdfUrl);
+          setShareCopied(false);
         }
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
     }
   }, [contractId, done, patient.patient_email]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    if (!shareFallbackUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareFallbackUrl);
+        setShareCopied(true);
+        return;
+      }
+      if (typeof document !== "undefined") {
+        const ta = document.createElement("textarea");
+        ta.value = shareFallbackUrl;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setShareCopied(true);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("copy share link failed:", e);
+      setError("Не удалось скопировать ссылку.");
+    }
+  }, [shareFallbackUrl]);
 
   // ── УСПЕХ ───────────────────────────────────────────────
   if (done) {
@@ -379,6 +408,45 @@ export function StepSignature({
           </span>
           <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
         </button>
+
+        {shareFallbackUrl && (
+          <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
+            <p className="font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
+              Системное окно «Поделиться» недоступно в этом браузере.
+            </p>
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>{shareCopied ? "Ссылка скопирована" : "Скопировать ссылку на договор"}</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const mailto = patient.patient_email
+                  ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent(`Ссылка на договор: ${shareFallbackUrl}`)}`
+                  : `mailto:?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent(`Ссылка на договор: ${shareFallbackUrl}`)}`;
+                window.location.href = mailto;
+              }}
+              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Отправить ссылку по email</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = shareFallbackUrl;
+              }}
+              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Открыть PDF</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
+            </button>
+          </div>
+        )}
 
         <button
           type="button"
