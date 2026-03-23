@@ -373,6 +373,10 @@ export function StepSignature({
           <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
         </button>
 
+        <p className="pt-1 font-mono text-[10px] text-[var(--pye-muted)]">
+          {canShare ? "Нажмите кнопку выше, чтобы открыть системное окно поделиться." : "Если системное окно поделиться недоступно — используйте email."}
+        </p>
+
         {shareFallbackUrl && (
           <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
             <p className="font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
@@ -563,7 +567,7 @@ export function StepSignature({
           className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
         >
           <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
-            Подписать и поделиться
+            Подписать и открыть договор
           </span>
           <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
         </button>
