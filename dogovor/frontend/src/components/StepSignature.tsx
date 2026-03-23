@@ -230,7 +230,7 @@ export function StepSignature({
   const handleShare = useCallback(async () => {
     if (!contractId || !done) return;
     try {
-      const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
+      const hasShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
       const rawPdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
       let sharePdfUrl = rawPdfUrl;
       // Если страница загружается по https — приводим share URL к https на всякий случай.
@@ -238,7 +238,7 @@ export function StepSignature({
         sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
       }
 
-      if (!navShare) {
+      if (!hasShare) {
         setShareFallbackUrl(sharePdfUrl);
         setShareCopied(false);
         setOpenPdfUrl(rawPdfUrl);
@@ -248,7 +248,7 @@ export function StepSignature({
       try {
         // 1) Сначала пробуем URL-first БЕЗ ожидания presigned/fetchContractShareUrl,
         // чтобы не потерять transient activation после await-ов.
-        await navShare({ title: `Договор № ${done}`, url: sharePdfUrl });
+        await navigator.share({ title: `Договор № ${done}`, url: sharePdfUrl });
         setOpenPdfUrl(rawPdfUrl);
         return;
       } catch (err) {
@@ -256,7 +256,7 @@ export function StepSignature({
         try {
           const share = await fetchContractShareUrl(contractId);
           const presignedUrl = share.url || rawPdfUrl;
-          await navShare({ title: `Договор № ${done}`, url: presignedUrl });
+          await navigator.share({ title: `Договор № ${done}`, url: presignedUrl });
           setOpenPdfUrl(rawPdfUrl);
           return;
         } catch {
@@ -266,7 +266,7 @@ export function StepSignature({
             const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, {
               type: "application/pdf",
             });
-            await navShare({ title: `Договор № ${done}`, files: [file] });
+            await navigator.share({ title: `Договор № ${done}`, files: [file] });
             setOpenPdfUrl(rawPdfUrl);
             return;
           } catch (e) {
@@ -313,8 +313,7 @@ export function StepSignature({
   const handleShareDebugTest = useCallback(async () => {
     try {
       const hasNavigator = typeof navigator !== "undefined";
-      const navShare = hasNavigator ? (navigator as any).share : null;
-      const navCanShare = hasNavigator ? (navigator as any).canShare : null;
+      const navCanShare = hasNavigator ? navigator.canShare : null;
       const secure = typeof window !== "undefined" ? window.isSecureContext : false;
       const canShareText =
         typeof navCanShare === "function"
@@ -327,19 +326,19 @@ export function StepSignature({
             })()
           : false;
 
-      if (!navShare) {
+      if (!hasNavigator || typeof navigator.share !== "function") {
         setShareDebug(
           `share отсутствует (secure=${String(secure)}, canShare=${String(
-            typeof navCanShare === "function"
+            typeof navigator?.canShare === "function"
           )}, canShareText=${String(canShareText)})`
         );
         return;
       }
 
-      await navShare({ text: "Тест системного шаринга PYE" });
+      await navigator.share({ text: "Тест системного шаринга PYE" });
       setShareDebug(
         `share OK (secure=${String(secure)}, canShare=${String(
-          typeof navCanShare === "function"
+          typeof navigator?.canShare === "function"
         )}, canShareText=${String(canShareText)})`
       );
     } catch (e) {
