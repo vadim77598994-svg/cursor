@@ -211,81 +211,19 @@ export function StepSignature({
   const handleShareClick = async () => {
     // Важно: не переключаем UI на success-экран до вызова navigator.share,
     // чтобы на iOS системное окно могло отобразиться.
-    const result = await doGenerate({ sendEmail: false, setUi: false });
+    // Универсальнее: сначала генерим договор и показываем success-экран,
+    // а уже затем пользователь нажимает "Поделиться" отдельным кликом.
+    // Так мы не теряем transient activation из-за ожидания сетевых запросов.
+    const result = await doGenerate({ sendEmail: false, setUi: true });
     if (!result?.contract_id) {
       setError("Не удалось сформировать договор для шаринга (нет contract_id)");
       return;
     }
-    const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
     const rawPdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-
-    // Сначала пытаемся получить presigned URL из MinIO (лучше для iOS Web Share).
-    let sharePdfUrl = rawPdfUrl;
-    try {
-      const share = await fetchContractShareUrl(result.contract_id);
-      sharePdfUrl = share.url || rawPdfUrl;
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error("fetchContractShareUrl failed:", e);
-    }
-    // Если страница загружена по https — приводим share URL к https на всякий случай.
-    if (typeof window !== "undefined" && window.location.protocol === "https:" && sharePdfUrl.startsWith("http:")) {
-      sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
-    }
-
-    const applySuccessUi = () => {
-      setDone(result.contract_number);
-      setContractId(result.contract_id ?? null);
-      setPdfPath(result.pdf_path ?? null);
-      setEmailSent(result.email_sent ?? false);
-      setEmailFailReason(result.email_fail_reason ?? null);
-      setOpenPdfUrl(rawPdfUrl);
-    };
-
-    // 1) Пробуем сначала делиться URL без скачивания blob: так надежнее на iOS.
-    if (navShare) {
-      try {
-        const canShareUrl =
-          typeof navigator !== "undefined" && typeof (navigator as any).canShare === "function"
-            ? (navigator as any).canShare({ url: sharePdfUrl })
-            : true;
-
-        if (!canShareUrl) {
-          applySuccessUi();
-          setShareFallbackUrl(sharePdfUrl);
-          setShareCopied(false);
-          return;
-        }
-
-        await navShare({ title: `Договор № ${result.contract_number}`, url: sharePdfUrl });
-        // После того как share-sheet показан/закрыт — переключаем UI.
-        applySuccessUi();
-        setShareFallbackUrl(null);
-        setShareCopied(false);
-        return;
-      } catch {
-        // падаем дальше и попробуем share как файл
-      }
-      try {
-        const blob = await fetchContractPdf(result.contract_id);
-        const file = new File([blob], `dogovor_${result.contract_number.replace(/\//g, "-")}.pdf`, {
-          type: "application/pdf",
-        });
-        await navShare({ title: `Договор № ${result.contract_number}`, files: [file] });
-        applySuccessUi();
-        setShareFallbackUrl(null);
-        setShareCopied(false);
-        return;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("navigator.share failed:", err);
-      }
-    }
-
-    // Универсальный fallback: не уводим пользователя в скачивание автоматически.
-    applySuccessUi();
-    setShareFallbackUrl(sharePdfUrl);
+    // Сбрасываем fallback-блок: он будет появляться только при попытке шэринга отдельной кнопкой.
+    setShareFallbackUrl(null);
     setShareCopied(false);
+    setOpenPdfUrl(rawPdfUrl);
   };
 
   const handleShare = useCallback(async () => {
@@ -294,13 +232,7 @@ export function StepSignature({
       const navShare = typeof navigator !== "undefined" ? (navigator as any).share : null;
       const rawPdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
       let sharePdfUrl = rawPdfUrl;
-      try {
-        const share = await fetchContractShareUrl(contractId);
-        sharePdfUrl = share.url || rawPdfUrl;
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error("fetchContractShareUrl (success screen) failed:", e);
-      }
+      // Если страница загружается по https — приводим share URL к https на всякий случай.
       if (typeof window !== "undefined" && window.location.protocol === "https:" && sharePdfUrl.startsWith("http:")) {
         sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
       }
@@ -313,32 +245,36 @@ export function StepSignature({
       }
 
       try {
-        // 1) URL-first: надежнее для share-sheet
-        const canShareUrl =
-          typeof navigator !== "undefined" && typeof (navigator as any).canShare === "function"
-            ? (navigator as any).canShare({ url: sharePdfUrl })
-            : true;
-        if (!canShareUrl) {
-          setShareFallbackUrl(sharePdfUrl);
-          setShareCopied(false);
-          setOpenPdfUrl(rawPdfUrl);
-          return;
-        }
-
+        // 1) Сначала пробуем URL-first БЕЗ ожидания presigned/fetchContractShareUrl,
+        // чтобы не потерять transient activation после await-ов.
         await navShare({ title: `Договор № ${done}`, url: sharePdfUrl });
         setOpenPdfUrl(rawPdfUrl);
+        return;
       } catch (err) {
-        // 2) Попробуем share как файл (если URL-first не сработал)
+        // 2) Если не сработало — пробуем presigned URL из MinIO
         try {
-          const blob = await fetchContractPdf(contractId);
-          const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, { type: "application/pdf" });
-          await navShare({ title: `Договор № ${done}`, files: [file] });
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.error("navigator.share files failed:", e);
-          setShareFallbackUrl(sharePdfUrl);
-          setShareCopied(false);
+          const share = await fetchContractShareUrl(contractId);
+          const presignedUrl = share.url || rawPdfUrl;
+          await navShare({ title: `Договор № ${done}`, url: presignedUrl });
           setOpenPdfUrl(rawPdfUrl);
+          return;
+        } catch {
+          // 3) Последний шанс: share как файл
+          try {
+            const blob = await fetchContractPdf(contractId);
+            const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, {
+              type: "application/pdf",
+            });
+            await navShare({ title: `Договор № ${done}`, files: [file] });
+            setOpenPdfUrl(rawPdfUrl);
+            return;
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error("navigator.share failed:", e);
+            setShareFallbackUrl(sharePdfUrl);
+            setShareCopied(false);
+            setOpenPdfUrl(rawPdfUrl);
+          }
         }
       }
     } catch (err) {
