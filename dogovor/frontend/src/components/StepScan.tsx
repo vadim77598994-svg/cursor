@@ -49,6 +49,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
   const [securityToggleOpen, setSecurityToggleOpen] = useState(false);
   const [securityDocUrl, setSecurityDocUrl] = useState<string | null>(null);
+  const [securityDocTitle, setSecurityDocTitle] = useState<string>("");
   const [securityDocError, setSecurityDocError] = useState<string | null>(null);
   const hasPreviewFile = Boolean(file && previewUrl);
   const showManualOption = phase === "spread";
@@ -230,7 +231,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
       .finally(() => setContractPreviewLoading(false));
   }, [contractToggleOpen, contractPreviewHtml, location.id, staff.id]);
 
-  const openSecurityDoc = useCallback(async (url: string) => {
+  const openSecurityDoc = useCallback(async (url: string, title: string) => {
     setSecurityDocError(null);
     try {
       const res = await fetch(url, { method: "HEAD" });
@@ -242,6 +243,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
         return;
       }
       setSecurityDocUrl(url);
+      setSecurityDocTitle(title);
     } catch {
       setSecurityDocUrl(null);
       setSecurityDocError(
@@ -509,7 +511,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
 
             <button
               type="button"
-              onClick={() => void openSecurityDoc("/licenses/fstek-tzki-license.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fstek-tzki-license.pdf", "Лицензия ТЗКИ ФСТЭК")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ТЗКИ ФСТЭК</span>
@@ -517,7 +519,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             </button>
             <button
               type="button"
-              onClick={() => void openSecurityDoc("/licenses/fsb-license-1.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fsb-license-1.pdf", "Лицензия ФСБ №1")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ФСБ №1</span>
@@ -525,7 +527,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             </button>
             <button
               type="button"
-              onClick={() => void openSecurityDoc("/licenses/fsb-license-2.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fsb-license-2.pdf", "Лицензия ФСБ №2")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ФСБ №2</span>
@@ -538,32 +540,41 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               </div>
             )}
 
-            {securityDocUrl && (
-              <div className="rounded-md border border-[var(--pye-border)] bg-white p-2">
-                <object
-                  data={`${securityDocUrl}#view=FitH&zoom=page-fit&toolbar=0&navpanes=0`}
-                  type="application/pdf"
-                  className="h-[72vh] w-full rounded bg-white"
-                >
-                  <div className="rounded-md border border-[var(--pye-border)] bg-[#FAFAF8] px-3 py-4 text-center">
-                    <p className="font-mono text-[10px] text-[var(--pye-muted)]">
-                      Предпросмотр PDF недоступен в этом браузере.
-                    </p>
-                  </div>
-                </object>
-                <a
-                  href={securityDocUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)] underline underline-offset-2 hover:text-[var(--pye-text)]"
-                >
-                  Открыть в новой вкладке
-                </a>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {securityDocUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/70 p-3">
+          <div className="mx-auto w-full max-w-3xl rounded-md border border-[var(--pye-border)] bg-white">
+            <div className="flex items-center justify-between border-b border-[var(--pye-border)] px-3 py-2">
+              <p className="text-[13px] font-medium text-[var(--pye-text)]">{securityDocTitle || "Документ"}</p>
+              <button
+                type="button"
+                onClick={() => setSecurityDocUrl(null)}
+                className="font-mono text-[11px] uppercase tracking-[.08em] text-[var(--pye-muted)] hover:text-[var(--pye-text)]"
+              >
+                Закрыть
+              </button>
+            </div>
+            <div className="p-2">
+              <iframe
+                title={securityDocTitle || "Документ"}
+                src={`${securityDocUrl}#view=FitH&zoom=page-fit`}
+                className="h-[82vh] w-full rounded border-0 bg-white"
+              />
+              <a
+                href={securityDocUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)] underline underline-offset-2 hover:text-[var(--pye-text)]"
+              >
+                Открыть в новой вкладке
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

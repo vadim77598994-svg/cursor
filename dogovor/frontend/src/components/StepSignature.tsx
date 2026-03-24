@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
-import { API_BASE, fetchContractPdf, fetchContractShareUrl, generateContract, previewContract, sendContractEmail } from "@/lib/api";
+import { API_BASE, fetchContractPdf, generateContract, previewContract, sendContractEmail } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -222,11 +222,6 @@ export function StepSignature({
     try {
       const hasShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
       const rawPdfUrl = `${API_BASE}/api/v1/contracts/${contractId}/pdf`;
-      let sharePdfUrl = rawPdfUrl;
-      // Если страница загружается по https — приводим share URL к https на всякий случай.
-      if (typeof window !== "undefined" && window.location.protocol === "https:" && sharePdfUrl.startsWith("http:")) {
-        sharePdfUrl = sharePdfUrl.replace(/^http:/, "https:");
-      }
 
       if (!hasShare) {
         setError("Системное окно поделиться недоступно в этом браузере.");
@@ -234,44 +229,25 @@ export function StepSignature({
       }
 
       try {
-        // 1) Сначала пробуем URL-first БЕЗ ожидания presigned/fetchContractShareUrl,
-        // чтобы не потерять transient activation после await-ов.
-        await navigator.share({ title: `Договор № ${done}`, url: sharePdfUrl });
+        // File-first: чтобы исключить поведение, когда URL-share уводит в PDF после закрытия системного окна.
+        const blob = await fetchContractPdf(contractId);
+        const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, {
+          type: "application/pdf",
+        });
+        await navigator.share({ title: `Договор № ${done}`, files: [file] });
         setOpenPdfUrl(rawPdfUrl);
         return;
-      } catch (err) {
-        if ((err as Error)?.name === "AbortError") return;
-        // 2) Если не сработало — пробуем presigned URL из MinIO
-        try {
-          const share = await fetchContractShareUrl(contractId);
-          const presignedUrl = share.url || rawPdfUrl;
-          await navigator.share({ title: `Договор № ${done}`, url: presignedUrl });
-          setOpenPdfUrl(rawPdfUrl);
-          return;
-        } catch (err2) {
-          if ((err2 as Error)?.name === "AbortError") return;
-          // 3) Последний шанс: share как файл
-          try {
-            const blob = await fetchContractPdf(contractId);
-            const file = new File([blob], `dogovor_${done.replace(/\//g, "-")}.pdf`, {
-              type: "application/pdf",
-            });
-            await navigator.share({ title: `Договор № ${done}`, files: [file] });
-            setOpenPdfUrl(rawPdfUrl);
-            return;
-          } catch (e) {
-            if ((e as Error)?.name === "AbortError") return;
-            // eslint-disable-next-line no-console
-            console.error("navigator.share failed:", e);
-            // Не уводим пользователя со страницы: остаёмся на экране выбора действий.
-            setError("Поделиться не удалось. Вы остались на экране отправки — попробуйте снова.");
-          }
-        }
+      } catch (e) {
+        if ((e as Error)?.name === "AbortError") return;
+        // eslint-disable-next-line no-console
+        console.error("navigator.share failed:", e);
+        // Не уводим пользователя со страницы: остаёмся на экране выбора действий.
+        setError("Поделиться не удалось. Вы остались на экране отправки — попробуйте снова.");
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
     }
-  }, [contractId, done, patient.patient_email]);
+  }, [contractId, done]);
 
   const handleSendEmailFromSuccess = useCallback(async () => {
     if (!contractId || !done) return;
