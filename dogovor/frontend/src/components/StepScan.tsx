@@ -540,11 +540,17 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
 
             {securityDocUrl && (
               <div className="rounded-md border border-[var(--pye-border)] bg-white p-2">
-                <iframe
-                  title="Документ безопасности"
-                  src={securityDocUrl}
-                  className="h-[56vh] w-full rounded border-0 bg-white"
-                />
+                <object
+                  data={`${securityDocUrl}#view=FitH&zoom=page-fit&toolbar=0&navpanes=0`}
+                  type="application/pdf"
+                  className="h-[72vh] w-full rounded bg-white"
+                >
+                  <div className="rounded-md border border-[var(--pye-border)] bg-[#FAFAF8] px-3 py-4 text-center">
+                    <p className="font-mono text-[10px] text-[var(--pye-muted)]">
+                      Предпросмотр PDF недоступен в этом браузере.
+                    </p>
+                  </div>
+                </object>
                 <a
                   href={securityDocUrl}
                   target="_blank"

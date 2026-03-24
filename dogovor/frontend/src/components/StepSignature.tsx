@@ -263,7 +263,8 @@ export function StepSignature({
             if ((e as Error)?.name === "AbortError") return;
             // eslint-disable-next-line no-console
             console.error("navigator.share failed:", e);
-            setError("Не удалось открыть системное окно поделиться.");
+            // Не уводим пользователя со страницы: остаёмся на экране выбора действий.
+            setError("Поделиться не удалось. Вы остались на экране отправки — попробуйте снова.");
           }
         }
       }
