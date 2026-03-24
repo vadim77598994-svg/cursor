@@ -453,6 +453,58 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
         )}
       </div>
 
+      {/* ── Безопасность данных ───────────────── */}
+      <div className="space-y-2">
+        <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
+          <p className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--pye-muted)]">
+            Безопасность персональных данных
+          </p>
+          <p className="mt-1 text-[12px] text-[var(--pye-muted)]">
+            Для клиентов, которые хотят подробнее ознакомиться с юридическими документами и политикой обработки данных.
+          </p>
+        </div>
+
+        <a
+          href="https://beorg.ru/politika-konfidencialnosti"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="text-[13px] font-medium text-[var(--pye-text)]">Политика конфиденциальности (Beorg)</span>
+          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>↗</span>
+        </a>
+
+        <a
+          href="/licenses/fstek-tzki-license.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ТЗКИ ФСТЭК</span>
+          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+        </a>
+
+        <a
+          href="/licenses/fsb-license-1.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ФСБ №1</span>
+          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+        </a>
+
+        <a
+          href="/licenses/fsb-license-2.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ФСБ №2</span>
+          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+        </a>
+      </div>
+
     </div>
   );
 }

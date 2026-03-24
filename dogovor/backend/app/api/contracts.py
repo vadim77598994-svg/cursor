@@ -3,6 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
+from pydantic import BaseModel
 
 from app.config import settings
 from app.models.contracts import GenerateContractRequest
@@ -21,6 +22,11 @@ from app.db_postgres import (
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+class SendContractEmailRequest(BaseModel):
+    email: str
+    patient_fio: str | None = None
 
 
 @router.post("/contracts/preview")
@@ -121,6 +127,46 @@ def get_contract_pdf_share_url(contract_id: str):
         raise
     except Exception as e:
         logger.exception("get_contract_pdf_share_url failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/contracts/{contract_id}/send-email")
+def send_contract_email(contract_id: str, body: SendContractEmailRequest):
+    """
+    Повторно отправляет PDF договора на email клиента с сервера.
+    """
+    try:
+        to_email = (body.email or "").strip()
+        if not to_email:
+            raise HTTPException(status_code=400, detail="Email обязателен")
+
+        row = get_contract_pdf_meta(contract_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Contract not found")
+
+        pdf_path = (row or {}).get("pdf_path")
+        contract_number = (row or {}).get("contract_number") or "contract"
+        if not pdf_path:
+            raise HTTPException(status_code=404, detail="PDF not found for this contract")
+
+        pdf_bytes = download_contract_pdf(pdf_path)
+        if not pdf_bytes:
+            raise HTTPException(status_code=404, detail="PDF file not available")
+
+        email_sent, email_fail_reason = send_contract_pdf(
+            to_email,
+            contract_number,
+            pdf_bytes,
+            (body.patient_fio or "").strip(),
+        )
+        if not email_sent:
+            raise HTTPException(status_code=500, detail=email_fail_reason or "Не удалось отправить email")
+
+        return {"ok": True, "email_sent": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("send_contract_email failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

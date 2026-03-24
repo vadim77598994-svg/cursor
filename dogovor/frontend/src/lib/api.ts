@@ -305,3 +305,20 @@ export async function fetchContractShareUrl(
   }
   return res.json();
 }
+
+export async function sendContractEmail(
+  contractId: string,
+  email: string,
+  patientFio?: string
+): Promise<{ ok: boolean; email_sent: boolean }> {
+  const res = await fetch(`${API_BASE}/api/v1/contracts/${contractId}/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, patient_fio: patientFio }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Не удалось отправить договор на email");
+  }
+  return res.json();
+}

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { GenerateContractResult, Location, Staff, PatientData } from "@/lib/api";
-import { API_BASE, fetchContractPdf, fetchContractShareUrl, generateContract, previewContract } from "@/lib/api";
+import { API_BASE, fetchContractPdf, fetchContractShareUrl, generateContract, previewContract, sendContractEmail } from "@/lib/api";
 
 type StepSignatureProps = {
   location: Location;
@@ -40,6 +40,8 @@ export function StepSignature({
   const [pdfPath, setPdfPath] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
+  const [successEmail, setSuccessEmail] = useState(patient.patient_email ?? "");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [openPdfUrl, setOpenPdfUrl] = useState<string | null>(null);
@@ -177,7 +179,7 @@ export function StepSignature({
         setError("Поставьте подпись в поле выше");
         return null;
       }
-      const sendEmail = opts?.sendEmail !== false;
+      const sendEmail = opts?.sendEmail === true;
       const setUi = opts?.setUi !== false;
       setError(null);
       setIsSubmitting(true);
@@ -194,6 +196,7 @@ export function StepSignature({
           setPdfPath(result.pdf_path ?? null);
           setEmailSent(result.email_sent ?? false);
           setEmailFailReason(result.email_fail_reason ?? null);
+          setSuccessEmail(patient.patient_email ?? "");
         }
         return result;
       } catch (e) {
@@ -206,21 +209,13 @@ export function StepSignature({
     [location.id, staff.id, patient, getSignatureDataUrl, hasStroke]
   );
 
-  const handleSubmit = () => doGenerate({ sendEmail: true });
-
-  const handleShareClick = async () => {
-    // Важно: не переключаем UI на success-экран до вызова navigator.share,
-    // чтобы на iOS системное окно могло отобразиться.
-    // Универсальнее: сначала генерим договор и показываем success-экран,
-    // а уже затем пользователь нажимает "Поделиться" отдельным кликом.
-    // Так мы не теряем transient activation из-за ожидания сетевых запросов.
+  const handleSubmit = async () => {
     const result = await doGenerate({ sendEmail: false, setUi: true });
     if (!result?.contract_id) {
-      setError("Не удалось сформировать договор для шаринга (нет contract_id)");
+      setError("Не удалось сформировать договор");
       return;
     }
     const rawPdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-    // Сбрасываем fallback-блок: он будет появляться только при попытке шэринга отдельной кнопкой.
     setShareFallbackUrl(null);
     setShareCopied(false);
     setOpenPdfUrl(rawPdfUrl);
@@ -309,6 +304,30 @@ export function StepSignature({
     }
   }, [shareFallbackUrl]);
 
+  const handleSendEmailFromSuccess = useCallback(async () => {
+    if (!contractId || !done) return;
+    const email = (successEmail || "").trim();
+    if (!email) {
+      setError("Введите email для отправки договора");
+      return;
+    }
+    setError(null);
+    setIsSendingEmail(true);
+    try {
+      await sendContractEmail(contractId, email, patient.patient_fio);
+      setEmailSent(true);
+      setEmailFailReason(null);
+      if (onPatientChange) {
+        onPatientChange({ ...patient, patient_email: email });
+      }
+    } catch (e) {
+      setEmailSent(false);
+      setEmailFailReason(e instanceof Error ? e.message : "Не удалось отправить письмо");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [contractId, done, successEmail, patient, onPatientChange]);
+
   // ── УСПЕХ ───────────────────────────────────────────────
   if (done) {
     return (
@@ -317,7 +336,7 @@ export function StepSignature({
         <div className="relative">
           <div className="rounded-md border border-[var(--pye-border)] bg-white px-6 py-7 text-center">
             <p className="mb-3 font-mono text-[9px] uppercase tracking-[.16em] text-emerald-600">
-              Договор оформлен
+              Договор подписан
             </p>
             <p className="text-3xl font-semibold tracking-tight text-[var(--pye-text)]">
               № {done}
@@ -346,14 +365,40 @@ export function StepSignature({
                 </div>
               ) : (
                 <div className="flex items-start gap-2">
-                  <span className="mt-0.5 font-mono text-[10px] text-[#C8460A]">!</span>
+                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-muted)]">•</span>
                   <span className="font-mono text-[10px] text-[var(--pye-muted)]">
-                    {emailFailReason ?? "Письмо не отправлено — проверьте настройки почты"}
+                    {emailFailReason ?? "Письмо ещё не отправлено — можно отправить ниже"}
                   </span>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
+          <label
+            htmlFor="success-email"
+            className="block font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-muted)]"
+          >
+            Email для отправки договора
+          </label>
+          <input
+            id="success-email"
+            type="email"
+            value={successEmail}
+            onChange={(e) => setSuccessEmail(e.target.value)}
+            placeholder="client@example.com"
+            className="block w-full rounded-[4px] border border-[var(--pye-border)] bg-white px-3 py-2 text-[13px] text-[var(--pye-text)] outline-none transition-colors focus:border-[var(--pye-text)]"
+          />
+          <button
+            type="button"
+            onClick={handleSendEmailFromSuccess}
+            disabled={isSendingEmail}
+            className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
+          >
+            <span>{isSendingEmail ? "Отправляем..." : "Отправить на почту"}</span>
+            <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
+          </button>
         </div>
 
         {/* Кнопки */}
@@ -519,28 +564,6 @@ export function StepSignature({
         </div>
       </div>
 
-      {/* Email поле */}
-      {onPatientChange && (
-        <div className="relative">
-          <div className="overflow-hidden rounded-md border border-[var(--pye-border)] bg-white focus-within:border-[var(--pye-text)]">
-            <label
-              htmlFor="patient-email"
-              className="block px-[18px] pt-2.5 font-mono text-[9px] uppercase tracking-[.12em] text-[var(--pye-muted)]"
-            >
-              Email для отправки договора
-            </label>
-            <input
-              id="patient-email"
-              type="email"
-              value={patient.patient_email ?? ""}
-              onChange={(e) => onPatientChange({ ...patient, patient_email: e.target.value || undefined })}
-              placeholder="client@example.com"
-              className="block w-full border-none bg-transparent px-[18px] pb-3 pt-1 text-[13px] text-[var(--pye-text)] outline-none placeholder:text-[var(--pye-border)] focus:ring-0"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Кнопки действий */}
       <div className="space-y-2">
         <button
@@ -550,21 +573,9 @@ export function StepSignature({
           className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] bg-[var(--pye-text)] px-5 py-4 transition-colors hover:bg-[#1C1C18] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="flex-1 text-center text-[13px] font-medium text-white">
-            {isSubmitting ? "Формируем договор…" : "Подписать и отправить"}
+            {isSubmitting ? "Формируем договор…" : "Подписать"}
           </span>
           {!isSubmitting && <span className="ml-3 font-mono text-base text-white" aria-hidden>→</span>}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleShareClick}
-          disabled={isSubmitting}
-          className="flex min-h-[48px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-5 py-4 transition-colors hover:border-[var(--pye-text)] disabled:opacity-50"
-        >
-          <span className="flex-1 text-center text-[13px] font-medium text-[var(--pye-text)]">
-            Подписать и открыть договор
-          </span>
-          <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
         </button>
       </div>
 
