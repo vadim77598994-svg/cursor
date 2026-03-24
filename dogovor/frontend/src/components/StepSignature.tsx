@@ -42,8 +42,6 @@ export function StepSignature({
   const [emailFailReason, setEmailFailReason] = useState<string | null>(null);
   const [successEmail, setSuccessEmail] = useState(patient.patient_email ?? "");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
   const [openPdfUrl, setOpenPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -216,8 +214,6 @@ export function StepSignature({
       return;
     }
     const rawPdfUrl = `${API_BASE}/api/v1/contracts/${result.contract_id}/pdf`;
-    setShareFallbackUrl(null);
-    setShareCopied(false);
     setOpenPdfUrl(rawPdfUrl);
   };
 
@@ -233,9 +229,7 @@ export function StepSignature({
       }
 
       if (!hasShare) {
-        setShareFallbackUrl(sharePdfUrl);
-        setShareCopied(false);
-        setOpenPdfUrl(rawPdfUrl);
+        window.location.href = rawPdfUrl;
         return;
       }
 
@@ -266,9 +260,7 @@ export function StepSignature({
           } catch (e) {
             // eslint-disable-next-line no-console
             console.error("navigator.share failed:", e);
-            setShareFallbackUrl(sharePdfUrl);
-            setShareCopied(false);
-            setOpenPdfUrl(rawPdfUrl);
+            window.location.href = rawPdfUrl;
           }
         }
       }
@@ -276,33 +268,6 @@ export function StepSignature({
       if ((err as Error).name !== "AbortError") setError((err as Error).message || "Не удалось отправить PDF");
     }
   }, [contractId, done, patient.patient_email]);
-
-  const handleCopyShareLink = useCallback(async () => {
-    if (!shareFallbackUrl) return;
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareFallbackUrl);
-        setShareCopied(true);
-        return;
-      }
-      if (typeof document !== "undefined") {
-        const ta = document.createElement("textarea");
-        ta.value = shareFallbackUrl;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        setShareCopied(true);
-      }
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error("copy share link failed:", e);
-      setError("Не удалось скопировать ссылку.");
-    }
-  }, [shareFallbackUrl]);
 
   const handleSendEmailFromSuccess = useCallback(async () => {
     if (!contractId || !done) return;
@@ -363,14 +328,7 @@ export function StepSignature({
                     Договор отправлен на email клиента
                   </span>
                 </div>
-              ) : (
-                <div className="flex items-start gap-2">
-                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-muted)]">•</span>
-                  <span className="font-mono text-[10px] text-[var(--pye-muted)]">
-                    {emailFailReason ?? "Письмо ещё не отправлено — можно отправить ниже"}
-                  </span>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -412,49 +370,6 @@ export function StepSignature({
           </span>
           <span className="ml-3 font-mono text-base text-[var(--pye-muted)]" aria-hidden>→</span>
         </button>
-
-        <p className="pt-1 font-mono text-[10px] text-[var(--pye-muted)]">
-          {canShare ? "Нажмите кнопку выше, чтобы открыть системное окно поделиться." : "Если системное окно поделиться недоступно — используйте email."}
-        </p>
-
-        {shareFallbackUrl && (
-          <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
-            <p className="font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
-              Системное окно «Поделиться» недоступно в этом браузере.
-            </p>
-            <button
-              type="button"
-              onClick={handleCopyShareLink}
-              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
-            >
-              <span>{shareCopied ? "Ссылка скопирована" : "Скопировать ссылку на договор"}</span>
-              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const mailto = patient.patient_email
-                  ? `mailto:${patient.patient_email}?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent(`Ссылка на договор: ${shareFallbackUrl}`)}`
-                  : `mailto:?subject=${encodeURIComponent("Договор № " + done)}&body=${encodeURIComponent(`Ссылка на договор: ${shareFallbackUrl}`)}`;
-                window.location.href = mailto;
-              }}
-              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
-            >
-              <span>Отправить ссылку по email</span>
-              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = openPdfUrl || shareFallbackUrl;
-              }}
-              className="flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-4 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
-            >
-              <span>Открыть PDF</span>
-              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>→</span>
-            </button>
-          </div>
-        )}
 
         <button
           type="button"
