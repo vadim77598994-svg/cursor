@@ -36,6 +36,9 @@ function PdfPagesViewer({ url }: { url: string }) {
   const [pages, setPages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,17 +113,77 @@ function PdfPagesViewer({ url }: { url: string }) {
       </div>
     );
   }
+
+  const distance = (a: Touch, b: Touch) => {
+    const dx = a.clientX - b.clientX;
+    const dy = a.clientY - b.clientY;
+    return Math.hypot(dx, dy);
+  };
+
   return (
     <div className="space-y-3">
-      {pages.map((src, idx) => (
-        <div key={idx} className="rounded border border-[var(--pye-border)] bg-white p-1">
-          <img
-            src={src}
-            alt={`PDF page ${idx + 1}`}
-            className="mx-auto h-auto max-h-[72vh] w-auto max-w-full object-contain"
-          />
+      <div className="flex items-center justify-between rounded border border-[var(--pye-border)] bg-white px-2 py-1">
+        <p className="font-mono text-[10px] text-[var(--pye-muted)]">Масштаб: {Math.round(zoom * 100)}%</p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(1, Number((z - 0.2).toFixed(2))))}
+            className="h-7 w-7 rounded border border-[var(--pye-border)] text-[14px] text-[var(--pye-text)]"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="rounded border border-[var(--pye-border)] px-2 py-1 font-mono text-[10px] text-[var(--pye-muted)]"
+          >
+            100%
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(4, Number((z + 0.2).toFixed(2))))}
+            className="h-7 w-7 rounded border border-[var(--pye-border)] text-[14px] text-[var(--pye-text)]"
+          >
+            +
+          </button>
         </div>
-      ))}
+      </div>
+
+      <div
+        className="space-y-3"
+        style={{ touchAction: "pan-y" }}
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            pinchStartDistRef.current = distance(e.touches[0], e.touches[1]);
+            pinchStartZoomRef.current = zoom;
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2 && pinchStartDistRef.current) {
+            e.preventDefault();
+            const current = distance(e.touches[0], e.touches[1]);
+            const nextZoom = pinchStartZoomRef.current * (current / pinchStartDistRef.current);
+            setZoom(Math.max(1, Math.min(4, Number(nextZoom.toFixed(2)))));
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (e.touches.length < 2) {
+            pinchStartDistRef.current = null;
+          }
+        }}
+      >
+        {pages.map((src, idx) => (
+          <div key={idx} className="overflow-auto rounded border border-[var(--pye-border)] bg-white p-1">
+            <div style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}>
+              <img
+                src={src}
+                alt={`PDF page ${idx + 1}`}
+                className="mx-auto h-auto max-h-[72vh] w-auto max-w-full object-contain"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
