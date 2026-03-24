@@ -32,6 +32,88 @@ type StepScanProps = {
   onManual: () => void;
 };
 
+function PdfPagesViewer({ url }: { url: string }) {
+  const [pages, setPages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const renderPdf = async () => {
+      setLoading(true);
+      setError(null);
+      setPages([]);
+      try {
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+        }
+        const loadingTask = pdfjs.getDocument(url);
+        const pdf = await loadingTask.promise;
+
+        const rendered: string[] = [];
+        const targetWidth = Math.min(
+          typeof window !== "undefined" ? window.innerWidth - 32 : 900,
+          900
+        );
+        for (let i = 1; i <= pdf.numPages; i += 1) {
+          if (cancelled) return;
+          const page = await pdf.getPage(i);
+          const base = page.getViewport({ scale: 1 });
+          const scale = Math.max(targetWidth / base.width, 0.5);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) continue;
+          const ratio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+          canvas.width = Math.floor(viewport.width * ratio);
+          canvas.height = Math.floor(viewport.height * ratio);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          rendered.push(canvas.toDataURL("image/webp", 0.92));
+        }
+
+        if (!cancelled) setPages(rendered);
+      } catch (e) {
+        if (!cancelled) {
+          setError("Не удалось встроенно отобразить PDF. Откройте документ в новой вкладке.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void renderPdf();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (loading) {
+    return (
+      <p className="py-8 text-center font-mono text-[11px] uppercase tracking-[.08em] text-[var(--pye-muted)]">
+        Загружаем документ…
+      </p>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-mono text-[10px] text-amber-800">
+        {error}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {pages.map((src, idx) => (
+        <img key={idx} src={src} alt={`PDF page ${idx + 1}`} className="w-full rounded border border-[var(--pye-border)]" />
+      ))}
+    </div>
+  );
+}
+
 export function StepScan({ location, staff, onRecognized, onManual }: StepScanProps) {
   const [phase, setPhase] = useState<Phase>("spread");
   const [spreadFile, setSpreadFile] = useState<File | null>(null);
@@ -558,11 +640,9 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               </button>
             </div>
             <div className="p-2">
-              <iframe
-                title={securityDocTitle || "Документ"}
-                src={`${securityDocUrl}#view=FitH&zoom=page-fit`}
-                className="h-[82vh] w-full rounded border-0 bg-white"
-              />
+              <div className="max-h-[82vh] overflow-auto rounded border border-[var(--pye-border)] p-1">
+                <PdfPagesViewer url={securityDocUrl} />
+              </div>
               <a
                 href={securityDocUrl}
                 target="_blank"

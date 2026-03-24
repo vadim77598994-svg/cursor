@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "next": "15.5.12",
+    "pdfjs-dist": "^5.5.207",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tesseract.js": "^5.1.1"
