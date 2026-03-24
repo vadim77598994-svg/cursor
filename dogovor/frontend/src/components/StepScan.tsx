@@ -53,14 +53,19 @@ function PdfPagesViewer({ url }: { url: string }) {
 
         const rendered: string[] = [];
         const targetWidth = Math.min(
-          typeof window !== "undefined" ? window.innerWidth - 32 : 900,
+          typeof window !== "undefined" ? window.innerWidth - 40 : 900,
           900
+        );
+        const targetHeight = Math.max(
+          Math.floor((typeof window !== "undefined" ? window.innerHeight : 900) * 0.72),
+          420
         );
         for (let i = 1; i <= pdf.numPages; i += 1) {
           if (cancelled) return;
           const page = await pdf.getPage(i);
           const base = page.getViewport({ scale: 1 });
-          const scale = Math.max(targetWidth / base.width, 0.5);
+          // Fit-page: страница целиком помещается в экран и не обрезается.
+          const scale = Math.min(targetWidth / base.width, targetHeight / base.height);
           const viewport = page.getViewport({ scale });
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
@@ -72,7 +77,7 @@ function PdfPagesViewer({ url }: { url: string }) {
           canvas.style.height = `${Math.floor(viewport.height)}px`;
           ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
           await page.render({ canvasContext: ctx, viewport }).promise;
-          rendered.push(canvas.toDataURL("image/webp", 0.92));
+          rendered.push(canvas.toDataURL("image/png"));
         }
 
         if (!cancelled) setPages(rendered);
@@ -106,9 +111,15 @@ function PdfPagesViewer({ url }: { url: string }) {
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {pages.map((src, idx) => (
-        <img key={idx} src={src} alt={`PDF page ${idx + 1}`} className="w-full rounded border border-[var(--pye-border)]" />
+        <div key={idx} className="rounded border border-[var(--pye-border)] bg-white p-1">
+          <img
+            src={src}
+            alt={`PDF page ${idx + 1}`}
+            className="mx-auto h-auto max-h-[72vh] w-auto max-w-full object-contain"
+          />
+        </div>
       ))}
     </div>
   );
