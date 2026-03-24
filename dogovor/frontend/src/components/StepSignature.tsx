@@ -316,22 +316,17 @@ export function StepSignature({
         {/* Главная карточка успеха */}
         <div className="relative">
           <div className="rounded-md border border-[var(--pye-border)] bg-white px-6 py-7 text-center">
-            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.16em] text-[var(--pye-accent)]">
+            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.16em] text-emerald-600">
               Договор оформлен
             </p>
             <p className="text-3xl font-semibold tracking-tight text-[var(--pye-text)]">
               № {done}
             </p>
-            {contractId && (
-              <p className="mt-2 font-mono text-[10px] text-[var(--pye-muted)]">
-                ID: {contractId}
-              </p>
-            )}
 
             <div className="mx-auto mt-5 max-w-xs space-y-1.5 text-left">
               {pdfPath ? (
                 <div className="flex items-start gap-2">
-                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-accent)]">✓</span>
+                  <span className="mt-0.5 font-mono text-[10px] text-emerald-600">✓</span>
                   <span className="font-mono text-[10px] text-[var(--pye-muted)]">PDF сохранён</span>
                 </div>
               ) : (
@@ -344,7 +339,7 @@ export function StepSignature({
               )}
               {emailSent ? (
                 <div className="flex items-start gap-2">
-                  <span className="mt-0.5 font-mono text-[10px] text-[var(--pye-accent)]">✓</span>
+                  <span className="mt-0.5 font-mono text-[10px] text-emerald-600">✓</span>
                   <span className="font-mono text-[10px] text-[var(--pye-muted)]">
                     Договор отправлен на email клиента
                   </span>

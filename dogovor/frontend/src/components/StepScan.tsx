@@ -233,13 +233,8 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
       {/* ── Заголовок ──────────────────────────── */}
       <div>
         <h2 className="text-[13px] font-semibold uppercase tracking-[.05em] text-[var(--pye-text)]">
-          Сканирование паспорта
+          Данные паспорта
         </h2>
-        <p className="mt-1 text-[13px] text-[var(--pye-muted)]">
-          {phase === "spread"
-            ? "Шаг 1: сделайте фото разворота с фото (стр. 2–3). Затем сделайте фото прописки — и отправим оба фото на распознавание одновременно."
-            : "Шаг 2: сделайте фото страницы с пропиской (опционально), затем отправим оба фото на распознавание."}
-        </p>
       </div>
 
       {/* ── Разворот выбран ───────────────────── */}
@@ -289,21 +284,12 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               onChange={handleFile}
               disabled={loading}
             />
-            {phase === "registration" && (
-              <span
-                className={`mb-1.5 block font-mono text-[9px] uppercase tracking-[.14em] ${
-                  registrationFile ? "text-emerald-600" : isRegistrationCardActive ? "text-white/55" : "text-[var(--pye-accent)]"
-                }`}
-              >
-                Шаг 2
-              </span>
-            )}
             <span
               className={`block text-[14px] font-semibold tracking-tight ${
                 phase === "spread" || isRegistrationCardActive ? "text-white" : "text-[var(--pye-text)]"
               }`}
             >
-              {phase === "spread" ? "Фото разворота" : "Фото прописки"}
+              {phase === "spread" ? "Сканирование" : "Фото прописки"}
             </span>
             <span
               className={`mt-1 block font-mono text-[10px] leading-relaxed ${
@@ -311,7 +297,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               }`}
             >
               {phase === "spread"
-                ? "Сначала разворот, потом (по желанию) прописка — и распознаём одним запросом"
+                ? "Сначала основной разворот, потом прописка."
                 : "Опционально: если есть время — добавьте страницу с адресом регистрации"}
             </span>
             <span
@@ -414,7 +400,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
                   : "Распознаём…"
                 : registrationFile
                 ? "Распознать (разворот + прописка)"
-                : "Распознать (только разворот)"}
+                : "Распознать (только основной разворот)"}
             </span>
             {!loading && (
               <span
@@ -425,11 +411,6 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
               </span>
             )}
           </button>
-          {!registrationFile && (
-            <p className="text-center font-mono text-[10px] text-[var(--pye-muted)]">
-              Прописка опциональна — можно распознать только разворот, а адрес ввести вручную на следующем шаге.
-            </p>
-          )}
         </div>
       )}
 

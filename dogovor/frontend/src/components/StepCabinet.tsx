@@ -135,13 +135,6 @@ export function StepCabinet({ onNext }: StepCabinetProps) {
                   >
                     {loc.name}
                   </span>
-                  <span
-                    className={`mt-0.5 block font-mono text-[10.5px] tracking-[.02em] ${
-                      selectedLocation?.id === loc.id ? "text-white/40" : "text-[var(--pye-muted)]"
-                    }`}
-                  >
-                    {loc.address}
-                  </span>
                 </div>
                 <span
                   className={`ml-4 h-1.5 w-1.5 shrink-0 rounded-full transition-all ${

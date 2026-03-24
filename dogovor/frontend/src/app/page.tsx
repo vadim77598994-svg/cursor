@@ -5,7 +5,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Location, Staff, PatientData } from "@/lib/api";
 
-const STEPS = ["Кабинет и врач", "Сканирование", "Проверка данных", "Подпись"];
+const STEPS = ["Кабинет", "Сканирование", "Проверка данных", "Подпись"];
 
 const MARQUEE_ITEMS = [
   "ПАЙ ОПТИКС",
