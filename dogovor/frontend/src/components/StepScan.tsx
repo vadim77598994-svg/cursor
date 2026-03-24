@@ -47,6 +47,8 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   const [contractToggleOpen, setContractToggleOpen] = useState(false);
   const [contractPreviewHtml, setContractPreviewHtml] = useState<string | null>(null);
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
+  const [securityToggleOpen, setSecurityToggleOpen] = useState(false);
+  const [securityDocUrl, setSecurityDocUrl] = useState<string | null>(null);
   const hasPreviewFile = Boolean(file && previewUrl);
   const showManualOption = phase === "spread";
   const showRegistrationOption = phase === "registration" && (!registrationFile || hasPreviewFile);
@@ -455,54 +457,79 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
 
       {/* ── Безопасность данных ───────────────── */}
       <div className="space-y-2">
-        <div className="rounded-md border border-[var(--pye-border)] bg-white p-4">
-          <p className="font-mono text-[9px] uppercase tracking-[.14em] text-[var(--pye-muted)]">
+        <button
+          type="button"
+          onClick={() => setSecurityToggleOpen((o) => !o)}
+          className="flex w-full items-center justify-between rounded-md border border-[var(--pye-border)] bg-white px-[18px] py-3.5 text-left transition-colors hover:border-[var(--pye-text)]"
+        >
+          <span className="text-[13px] font-medium text-[var(--pye-text)]">
             Безопасность персональных данных
-          </p>
-          <p className="mt-1 text-[12px] text-[var(--pye-muted)]">
-            Для клиентов, которые хотят подробнее ознакомиться с юридическими документами и политикой обработки данных.
-          </p>
-        </div>
+          </span>
+          <span className="font-mono text-[11px] text-[var(--pye-muted)]" aria-hidden>
+            {securityToggleOpen ? "▼" : "▶"}
+          </span>
+        </button>
 
-        <a
-          href="https://beorg.ru/politika-konfidencialnosti"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
-        >
-          <span className="text-[13px] font-medium text-[var(--pye-text)]">Политика конфиденциальности (Beorg)</span>
-          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>↗</span>
-        </a>
+        {securityToggleOpen && (
+          <div className="space-y-2 rounded-md border border-[var(--pye-border)] bg-white p-3">
+            <p className="font-mono text-[10px] text-[var(--pye-muted)]">
+              Политика конфиденциальности и лицензии доступны для ознакомления.
+            </p>
 
-        <a
-          href="/licenses/fstek-tzki-license.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
-        >
-          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ТЗКИ ФСТЭК</span>
-          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
-        </a>
+            <a
+              href="https://beorg.ru/politika-konfidencialnosti"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Политика конфиденциальности (Beorg)</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>↗</span>
+            </a>
 
-        <a
-          href="/licenses/fsb-license-1.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
-        >
-          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ФСБ №1</span>
-          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
-        </a>
+            <button
+              type="button"
+              onClick={() => setSecurityDocUrl("/licenses/fstek-tzki-license.pdf")}
+              className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Лицензия ТЗКИ ФСТЭК</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecurityDocUrl("/licenses/fsb-license-1.pdf")}
+              className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Лицензия ФСБ №1</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecurityDocUrl("/licenses/fsb-license-2.pdf")}
+              className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
+            >
+              <span>Лицензия ФСБ №2</span>
+              <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
+            </button>
 
-        <a
-          href="/licenses/fsb-license-2.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex min-h-[44px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] bg-white px-4 py-3 transition-colors hover:border-[var(--pye-text)]"
-        >
-          <span className="text-[13px] text-[var(--pye-text)]">Лицензия ФСБ №2</span>
-          <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
-        </a>
+            {securityDocUrl && (
+              <div className="rounded-md border border-[var(--pye-border)] bg-white p-2">
+                <iframe
+                  title="Документ безопасности"
+                  src={securityDocUrl}
+                  className="h-[56vh] w-full rounded border-0 bg-white"
+                />
+                <a
+                  href={securityDocUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[.08em] text-[var(--pye-muted)] underline underline-offset-2 hover:text-[var(--pye-text)]"
+                >
+                  Открыть в новой вкладке
+                </a>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
     </div>
