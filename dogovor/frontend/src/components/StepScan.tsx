@@ -37,8 +37,9 @@ function PdfPagesViewer({ url }: { url: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchStartDistRef = useRef<number | null>(null);
-  const pinchStartZoomRef = useRef<number>(1);
+  const pinchStartZoomRef = useRef(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,9 +115,9 @@ function PdfPagesViewer({ url }: { url: string }) {
     );
   }
 
-  const distance = (a: Touch, b: Touch) => {
-    const dx = a.clientX - b.clientX;
-    const dy = a.clientY - b.clientY;
+  const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
     return Math.hypot(dx, dy);
   };
 
@@ -151,25 +152,35 @@ function PdfPagesViewer({ url }: { url: string }) {
 
       <div
         className="space-y-3"
-        style={{ touchAction: "pan-y" }}
-        onTouchStart={(e) => {
-          if (e.touches.length === 2) {
-            pinchStartDistRef.current = distance(e.touches[0], e.touches[1]);
+        style={{ touchAction: "none" }}
+        onPointerDown={(e) => {
+          if (e.pointerType !== "touch") return;
+          pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pointersRef.current.size === 2) {
+            const [p1, p2] = Array.from(pointersRef.current.values());
+            pinchStartDistRef.current = distance(p1, p2);
             pinchStartZoomRef.current = zoom;
           }
         }}
-        onTouchMove={(e) => {
-          if (e.touches.length === 2 && pinchStartDistRef.current) {
-            e.preventDefault();
-            const current = distance(e.touches[0], e.touches[1]);
-            const nextZoom = pinchStartZoomRef.current * (current / pinchStartDistRef.current);
+        onPointerMove={(e) => {
+          if (e.pointerType !== "touch") return;
+          if (!pointersRef.current.has(e.pointerId)) return;
+          pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pointersRef.current.size === 2 && pinchStartDistRef.current) {
+            const [p1, p2] = Array.from(pointersRef.current.values());
+            const currentDist = distance(p1, p2);
+            const ratio = currentDist / pinchStartDistRef.current;
+            const nextZoom = pinchStartZoomRef.current * ratio;
             setZoom(Math.max(1, Math.min(4, Number(nextZoom.toFixed(2)))));
           }
         }}
-        onTouchEnd={(e) => {
-          if (e.touches.length < 2) {
-            pinchStartDistRef.current = null;
-          }
+        onPointerUp={(e) => {
+          pointersRef.current.delete(e.pointerId);
+          if (pointersRef.current.size < 2) pinchStartDistRef.current = null;
+        }}
+        onPointerCancel={(e) => {
+          pointersRef.current.delete(e.pointerId);
+          if (pointersRef.current.size < 2) pinchStartDistRef.current = null;
         }}
       >
         {pages.map((src, idx) => (
