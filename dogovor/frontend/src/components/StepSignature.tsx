@@ -229,7 +229,7 @@ export function StepSignature({
       }
 
       if (!hasShare) {
-        window.location.href = rawPdfUrl;
+        setError("Системное окно поделиться недоступно в этом браузере.");
         return;
       }
 
@@ -240,6 +240,7 @@ export function StepSignature({
         setOpenPdfUrl(rawPdfUrl);
         return;
       } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
         // 2) Если не сработало — пробуем presigned URL из MinIO
         try {
           const share = await fetchContractShareUrl(contractId);
@@ -247,7 +248,8 @@ export function StepSignature({
           await navigator.share({ title: `Договор № ${done}`, url: presignedUrl });
           setOpenPdfUrl(rawPdfUrl);
           return;
-        } catch {
+        } catch (err2) {
+          if ((err2 as Error)?.name === "AbortError") return;
           // 3) Последний шанс: share как файл
           try {
             const blob = await fetchContractPdf(contractId);
@@ -258,9 +260,10 @@ export function StepSignature({
             setOpenPdfUrl(rawPdfUrl);
             return;
           } catch (e) {
+            if ((e as Error)?.name === "AbortError") return;
             // eslint-disable-next-line no-console
             console.error("navigator.share failed:", e);
-            window.location.href = rawPdfUrl;
+            setError("Не удалось открыть системное окно поделиться.");
           }
         }
       }

@@ -49,6 +49,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
   const [contractPreviewLoading, setContractPreviewLoading] = useState(false);
   const [securityToggleOpen, setSecurityToggleOpen] = useState(false);
   const [securityDocUrl, setSecurityDocUrl] = useState<string | null>(null);
+  const [securityDocError, setSecurityDocError] = useState<string | null>(null);
   const hasPreviewFile = Boolean(file && previewUrl);
   const showManualOption = phase === "spread";
   const showRegistrationOption = phase === "registration" && (!registrationFile || hasPreviewFile);
@@ -228,6 +229,26 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
       .catch(() => setContractPreviewHtml("<p>Не удалось загрузить текст договора.</p>"))
       .finally(() => setContractPreviewLoading(false));
   }, [contractToggleOpen, contractPreviewHtml, location.id, staff.id]);
+
+  const openSecurityDoc = useCallback(async (url: string) => {
+    setSecurityDocError(null);
+    try {
+      const res = await fetch(url, { method: "HEAD" });
+      if (!res.ok) {
+        setSecurityDocUrl(null);
+        setSecurityDocError(
+          "Файл лицензии пока не загружен на сервер. Добавьте PDF в frontend/public/licenses и выполните деплой."
+        );
+        return;
+      }
+      setSecurityDocUrl(url);
+    } catch {
+      setSecurityDocUrl(null);
+      setSecurityDocError(
+        "Не удалось открыть файл лицензии. Проверьте подключение и попробуйте ещё раз."
+      );
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -488,7 +509,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
 
             <button
               type="button"
-              onClick={() => setSecurityDocUrl("/licenses/fstek-tzki-license.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fstek-tzki-license.pdf")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ТЗКИ ФСТЭК</span>
@@ -496,7 +517,7 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             </button>
             <button
               type="button"
-              onClick={() => setSecurityDocUrl("/licenses/fsb-license-1.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fsb-license-1.pdf")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ФСБ №1</span>
@@ -504,12 +525,18 @@ export function StepScan({ location, staff, onRecognized, onManual }: StepScanPr
             </button>
             <button
               type="button"
-              onClick={() => setSecurityDocUrl("/licenses/fsb-license-2.pdf")}
+              onClick={() => void openSecurityDoc("/licenses/fsb-license-2.pdf")}
               className="flex min-h-[42px] w-full items-center justify-between rounded-[4px] border border-[var(--pye-border)] px-3 py-2 text-[13px] text-[var(--pye-text)] transition-colors hover:border-[var(--pye-text)]"
             >
               <span>Лицензия ФСБ №2</span>
               <span className="font-mono text-[var(--pye-muted)]" aria-hidden>PDF</span>
             </button>
+
+            {securityDocError && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-mono text-[10px] text-amber-800">
+                {securityDocError}
+              </div>
+            )}
 
             {securityDocUrl && (
               <div className="rounded-md border border-[var(--pye-border)] bg-white p-2">
